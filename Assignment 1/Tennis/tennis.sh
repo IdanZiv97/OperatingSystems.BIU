@@ -129,7 +129,8 @@ calculate_ball_locations() {
     if [ $winner -eq 0 ];
     then
         check_for_winner
-    elif [ $winner -gt 0 ];
+    fi
+    if [ $winner -ge 0 ];
     then
         #p1 is the winner of the draw
         p1_won_guess
@@ -168,17 +169,18 @@ p2_won_guess() {
 #main
 
 print_board
-while [ $END_GAME -eq 0 ]; 
+while [ $TRUE ]; 
 do
     read_p1_guess
     read_p2_guess
     calculate_ball_locations
     # check_for_winner
-    if [ $END_GAME -eq 0 ];
+    if [ $END_GAME -eq 1 ];
     then
-        print_board
-        print_guess
+        break
     fi
+    print_board
+    print_guess
 done
 
 
