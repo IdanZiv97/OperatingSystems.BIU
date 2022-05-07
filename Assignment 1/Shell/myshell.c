@@ -33,7 +33,8 @@ void history();
 int main(int argc, char const *argv[]) {
     // handle adding the paths passed as arguments to PATH
     if (argc > 1) {
-        for (int i = 1; i < argc; i++) {
+        int i;
+        for (i = 1; i < argc; i++) {
             addToPATH(argv[i]);
         }
     }
@@ -42,11 +43,12 @@ int main(int argc, char const *argv[]) {
     shellPrompt(userInput);
     while (strcmp(userInput, "exit") != 0) {
         // support the behavior of a shell when no input entered or a space
-        if (strcmp(userInput, "") == 0 || isspace(userInput)) {
+        if (strcmp(userInput, "") == 0 || strcmp(userInput, " ") == 0) {
+            shellPrompt(userInput);
             continue;
         }
         //handle user input - break to arguements
-        char* inputCopy[MAX_LENGTH] = {};
+        char inputCopy[MAX_LENGTH] = {};
         // the copy will allow us to save the original input for history
         strcpy(inputCopy, userInput);
         char *tokens[MAX_LENGTH] = {};
@@ -100,7 +102,6 @@ int main(int argc, char const *argv[]) {
         }
         shellPrompt(userInput);
     }
-    
 }
 
 void shellPrompt(char inputBuffer[MAX_LENGTH]) {
@@ -151,7 +152,8 @@ void history() {
     commandHistory[numOfCommands].commandPID = getpid();
     strcpy(commandHistory[numOfCommands].commandString, "history");
     numOfCommands++;
-    for (int index = 0; index < numOfCommands; index++) {
+    int index;
+    for (index = 0; index < numOfCommands; index++) {
         pid_t currentPID = commandHistory[index].commandPID;
         char *currentString = commandHistory[index].commandString;
         printf("%ld %s\n", currentPID, currentString);
