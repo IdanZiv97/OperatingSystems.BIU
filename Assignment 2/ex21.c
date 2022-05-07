@@ -42,12 +42,8 @@ int main(int argc, char const *argv[])
     }
     char file1Path[PATH_MAX] = {};
     strcpy(file1Path, argv[1]);
-    printf("first path\n");
-    puts(argv[1]);
     char file2Path[PATH_MAX] = {};
     strcpy(file2Path, argv[2]);
-    printf("second path\n");
-    puts(argv[2]);
     ssize_t file1FD = open(file1Path, O_RDONLY);
     if (file1FD == -1) {
         perror("Failed to open file 1\n");
@@ -98,13 +94,12 @@ int main(int argc, char const *argv[])
             closeFiles(file1FD, file2FD);
         }
     }
-    // handleReminder
+    // handleReminder - at this point the files are either similar or different. depends if the reminders conatain
+    // a non-whitespace character
     if (file1ReadIndicator > 0) {
         isIdentical = 0;
         skipWhiteSpaces(file1FD, &buffer1, &file1ReadIndicator, file2FD);
         if (!isspace(buffer1)) {
-            printf("return 2");
-            return DIFFERENT;
         }
     }
     if (file2ReadIndicator > 0) {
@@ -125,7 +120,6 @@ int main(int argc, char const *argv[])
         printf("return 5");
         return SIMILAR;
     }
-    return 0;
 }
 
 
