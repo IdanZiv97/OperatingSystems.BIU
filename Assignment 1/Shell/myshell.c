@@ -15,7 +15,7 @@ typedef struct command {
     char commandString[MAX_LENGTH];
 }command;
 
-command commandHistory[100] = {};
+command commandHistory[100];
 int numOfCommands = 0;
 
 
@@ -31,6 +31,7 @@ void history();
 
 int main(int argc, char const *argv[]) {
     // handle adding the paths passed as arguments to PATH
+    printf("num of args: %d\n", argc);
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
             addToPATH(argv[i]);
@@ -38,8 +39,8 @@ int main(int argc, char const *argv[]) {
     }
     // declare and initialize buffer for user input
     char userInput[MAX_LENGTH] = {};
+    shellPrompt(userInput);
     while (strcmp(userInput, "exit") != 0) {
-        shellPrompt(userInput);
         // support the behavior of a shell when no input entered or a space
         if (strcmp(userInput, "") == 0 || isspace(userInput)) {
             continue;
@@ -55,12 +56,14 @@ int main(int argc, char const *argv[]) {
         while (token) {
             tokens[numOfTokens] = token;
             token = strtok(NULL, " ");
+            numOfTokens++;
         }
         // now we have the input
         //first check with the buitin - history and cd
         //history
         if (strcmp(tokens[0], "history") == 0) {
             history();
+            shellPrompt(userInput);
             continue;
         }
         //cd
@@ -70,6 +73,8 @@ int main(int argc, char const *argv[]) {
             strcpy(commandHistory[numOfCommands].commandString, userInput);
             numOfCommands++;
             cd(tokens[1]);
+            shellPrompt(userInput);
+            continue;
         }
         // a non build in command was entered
         // fork a new process
@@ -93,46 +98,19 @@ int main(int argc, char const *argv[]) {
                 }
             }
         }
+        shellPrompt(userInput);
     }
     
 }
-
-
-/**
-int temp() {
-    // user's input buffer
-    char userInput[MAX_LENGTH] = {};
-    // last directory buffer
-    char lastDirectory[PATH_MAX] = {};
-    // save last directory
-    if (getcwd(lastDirectory, sizeof(lastDirectory)) == NULL) {
-        perror("pwd falied");
-    }
-    printf("the current dir:\n");
-    puts(lastDirectory);
-    while (strcmp(userInput, "exit") != 0) {
-
-        shellPrompt(userInput);
-        if (strcmp(userInput, "") == '\0' || isspace(userInput)) {
-            printf("no input entered or space\n");
-            continue;
-        }
-        printf("%s\n", userInput);
-
-    }
-    return 0;
-}
-**/
-
 
 void shellPrompt(char inputBuffer[MAX_LENGTH]) {
     printf("$ ");
     fflush(stdout);
     fgets(inputBuffer, MAX_LENGTH, stdin);
     // get rid of newline character from fgets
-    char *newLineCharacter;
-    if ((newLineCharacter=strchr(inputBuffer, '\n') != NULL)) {
-        *newLineCharacter = '\0';
+    char *newLineCharacter = strchr(inputBuffer, '\n');
+    if (newLineCharacter != NULL) {
+        *newLineCharacter = 0;
     }
 }
 
@@ -140,9 +118,11 @@ void addToPATH(const char* path) {
     //get the current PATH
     char *currentPATH = getenv("PATH");
     if (currentPATH == NULL) {
+        printf("currentPath is NULL\n");
         return;
     }
     //concat using strcat
+    strcat(currentPATH, ":");
     strcat(currentPATH, path);
     //set the new path
     int setenvStatus = setenv("PATH", currentPATH, 1);
@@ -170,11 +150,11 @@ void history() {
     //first add this current history
     commandHistory[numOfCommands].commandPID = getpid();
     strcpy(commandHistory[numOfCommands].commandString, "history");
+    numOfCommands++;
     for (int index = 0; index < numOfCommands; index++) {
         pid_t currentPID = commandHistory[index].commandPID;
         char *currentString = commandHistory[index].commandString;
         printf("%ld %s\n", currentPID, currentString);
     }
-    numOfCommands++;
  }
 
