@@ -7,13 +7,10 @@ GUESS2=0
 BALL_LOCATION=0
 END_GAME=0
 TRUE=1
-WINNER=0
-FIRST_TIME=1
-MIDDLEROW=" |       |       O       |       | "
 # define global strings
 print_board() { 
-    SCORE1=$(($SCORE1 - $GUESS1))
-    SCORE2=$(($SCORE2 - $GUESS2))
+    # SCORE1=$(($SCORE1 - $GUESS1))
+    # SCORE2=$(($SCORE2 - $GUESS2))
     echo " Player 1: $SCORE1         Player 2: $SCORE2 "
     echo " --------------------------------- "
     echo " |       |       #       |       | "
@@ -88,7 +85,7 @@ read_p2_guess() {
         fi
     done
 }
-
+# try to calculate the score here
 check_for_winner() {
     if [ $GUESS1 -eq 50 ] && [ $GUESS2 -eq 50 ] && [ $BALL_LOCATION -eq 0 ];
     then
@@ -96,27 +93,39 @@ check_for_winner() {
         END_GAME=1
     elif [ $BALL_LOCATION == 3 ];
     then
+        print_board
+        print_guess
         echo "PLAYER 1 WINS !"
         END_GAME=1
     elif [ $BALL_LOCATION == -3 ];
     then
+        print_board
+        print_guess
         echo "PLAYER 2 WINS !"
         END_GAME=1
     elif [ $SCORE1 -eq 0 ] && [ $SCORE2 -gt 0 ];
     then
+        print_board
+        print_guess
         echo "PLAYER 2 WINS !"
         END_GAME=1
     elif [ $SCORE1 -gt 0 ] && [ $SCORE2 -eq 0 ];
     then
+        print_board
+        print_guess
         echo "PLAYER 1 WINS !"
         END_GAME=1
     elif [ $SCORE1 -gt 0 ] && [ $SCORE2 -eq 0 ];
     then
         if [ $BALL_LOCATION -gt 0 ];
         then
+            print_board
+            print_guess
             echo "PLAYER 2 WINS !"
             END_GAME=1
         else
+            print_board
+            print_guess
             echo "PLAYER 1 WINS !"
             END_GAME=1
         fi
@@ -129,8 +138,7 @@ calculate_ball_locations() {
     if [ $winner -eq 0 ];
     then
         check_for_winner
-    fi
-    if [ $winner -ge 0 ];
+    elif [ $winner -ge 0 ];
     then
         #p1 is the winner of the draw
         p1_won_guess
@@ -161,18 +169,14 @@ p2_won_guess() {
     fi
 }
 
-# print_board
-# read_p1_guess
-# read_p2_guess
-# check_for_winner
-
-#main
-
+# main
 print_board
 while [ $TRUE ]; 
 do
     read_p1_guess
     read_p2_guess
+    SCORE1=$(($SCORE1 - $GUESS1))
+    SCORE2=$(($SCORE2 - $GUESS2))
     calculate_ball_locations
     # check_for_winner
     if [ $END_GAME -eq 1 ];
@@ -182,19 +186,3 @@ do
     print_board
     print_guess
 done
-
-
-
-
-# while [ $TRUE ]; 
-# do
-#     print_board
-#     if [ $FIRST_TIME == 0 ];
-#     then
-#         print_guess
-#     else
-#         FIRST_TIME=0
-#     fi
-#     print_guess
-#     calculate_ball_locations
-# done
