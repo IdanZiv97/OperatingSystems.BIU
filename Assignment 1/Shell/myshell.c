@@ -10,12 +10,12 @@
 #define MAX_LENGTH 100
 #define MAX_CMD 100
 // Global Variables
-typedef struct command {
+typedef struct Command {
     pid_t commandPID;
     char commandString[MAX_LENGTH];
-}command;
+}Command;
 
-command commandHistory[100];
+Command commandHistory[100];
 int numOfCommands = 0;
 
 
