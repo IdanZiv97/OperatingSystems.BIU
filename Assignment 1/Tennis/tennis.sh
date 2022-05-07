@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#Idan Ziv 318175197
 SCORE1=50
 SCORE2=50
 GUESS1=0

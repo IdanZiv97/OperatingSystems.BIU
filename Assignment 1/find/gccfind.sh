@@ -1,6 +1,5 @@
 #!/bin/bash
-
-# global variable for pwd
+#Idan Ziv 318175197
 
 # check the number of of args
 if [ $# -lt 2 ]; 

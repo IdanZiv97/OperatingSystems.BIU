@@ -1,3 +1,4 @@
+// Idan Ziv 318175197
 #include <stdio.h>
 #include <unistd.h>
 #include <limits.h>
@@ -31,7 +32,6 @@ void history();
 
 int main(int argc, char const *argv[]) {
     // handle adding the paths passed as arguments to PATH
-    printf("num of args: %d\n", argc);
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
             addToPATH(argv[i]);
