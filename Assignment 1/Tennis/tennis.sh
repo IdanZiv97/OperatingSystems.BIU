@@ -23,7 +23,7 @@ print_board() {
 
 print_guess() {
     echo "       Player 1 played: ${GUESS1}"
-    echo -n "       Player 2 played: ${GUESS2}"
+    echo "       Player 2 played: ${GUESS2}"
     echo ""
     echo ""
 }
@@ -115,18 +115,18 @@ check_for_winner() {
         print_guess
         echo "PLAYER 1 WINS !"
         END_GAME=1
-    elif [ $SCORE1 -gt 0 ] && [ $SCORE2 -eq 0 ];
+    elif [ $SCORE1 -eq 0 ] && [ $SCORE2 -eq 0 ];
     then
         if [ $BALL_LOCATION -gt 0 ];
         then
             print_board
             print_guess
-            echo "PLAYER 2 WINS !"
+            echo "PLAYER 1 WINS !"
             END_GAME=1
         else
             print_board
             print_guess
-            echo "PLAYER 1 WINS !"
+            echo "PLAYER 2 WINS !"
             END_GAME=1
         fi
     fi
