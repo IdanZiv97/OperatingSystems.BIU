@@ -25,7 +25,7 @@ void shellPrompt(char inputBuffer[MAX_LENGTH]);
 // function to add path to the env variable path
 void addToPATH(const char* path);
 //function to handle cd
-void cd(char path[MAX_LENGTH]);
+void cd(char path[MAX_LENGTH], char userInput[MAX_LENGTH]);
 //function to print history
 void history();
 
@@ -71,10 +71,7 @@ int main(int argc, char const *argv[]) {
         //cd
         if (strcmp(tokens[0], "cd") == 0) {
             // add the command to the history
-            commandHistory[numOfCommands].commandPID = getpid();
-            strcpy(commandHistory[numOfCommands].commandString, userInput);
-            numOfCommands++;
-            cd(tokens[1]);
+            cd(tokens[1], userInput);
             shellPrompt(userInput);
             continue;
         }
@@ -104,6 +101,11 @@ int main(int argc, char const *argv[]) {
     }
 }
 
+/**
+ * @brief This function prints the prompt of the shell and read the input
+ * Note: fgets does not ommit the '\n' character so the function handles that
+ * @param inputBuffer a buffer for the user's input
+ */
 void shellPrompt(char inputBuffer[MAX_LENGTH]) {
     printf("$ ");
     fflush(stdout);
@@ -115,6 +117,11 @@ void shellPrompt(char inputBuffer[MAX_LENGTH]) {
     }
 }
 
+/**
+ * @brief function responsible to adding a path to the enviroment variable PATH
+ * The function also handles with errors.
+ * @param path the desired path from the user
+ */
 void addToPATH(const char* path) {
     //get the current PATH
     char *currentPATH = getenv("PATH");
@@ -133,20 +140,24 @@ void addToPATH(const char* path) {
 }
 
 /**
- * This function handles the cd command.
- * The command is built in so there is no need for it to run on a different process.
- * @path the path desired
- * 
- **/
-void cd(char path[MAX_LENGTH]) {
+ * @brief function to handle cd command
+ * Takes care of the error handling
+ * Adds the command to the "history"
+ * @param path 
+ */
+void cd(char path[MAX_LENGTH], char userInput[MAX_LENGTH]) {
+    commandHistory[numOfCommands].commandPID = getpid();
+    strcpy(commandHistory[numOfCommands].commandString, userInput);
+    numOfCommands++;
     if (chdir(path) == -1) {
         perror("chdir failed");
     }
 }
 
 /**
- * This function prints all the past commands
- **/
+ * @brief This function displays the history of commands entered by the user
+ * The history command itself is added to the "history" before it prints it
+ */
 void history() {
     //first add this current history
     commandHistory[numOfCommands].commandPID = getpid();
