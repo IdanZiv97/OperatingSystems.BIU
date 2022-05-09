@@ -79,7 +79,6 @@ int main(int argc, char const *argv[])
             buffer2 = (unsigned char) tolower(buffer2);
             if (buffer1 != buffer2) {
                 closeFiles(file1FD, file2FD);
-                printf("return 1");
                 return DIFFERENT;
             }
         }
@@ -106,18 +105,15 @@ int main(int argc, char const *argv[])
         isIdentical = 0;
         skipWhiteSpaces(file2FD, &buffer2, &file2ReadIndicator, file1FD);
         if (!isspace(buffer2)) {
-            printf("return 3");
             return DIFFERENT;
         }
     }
 
     if (isIdentical) { 
         closeFiles(file1FD, file2FD);
-        printf("return 4");
         return IDENTICAL;
     } else {
         closeFiles(file1FD, file2FD);
-        printf("return 5");
         return SIMILAR;
     }
 }
