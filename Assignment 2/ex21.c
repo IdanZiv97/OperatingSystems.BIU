@@ -70,11 +70,9 @@ int main(int argc, char const *argv[])
     }
     while (file1ReadIndicator > 0 && file2ReadIndicator > 0) {
         if (buffer1 != buffer2) {
-            printf("%c , %c\n", buffer1, buffer2);
             isIdentical = 0;
             skipWhiteSpaces(file1FD, &buffer1, &file1ReadIndicator, file2FD);
             skipWhiteSpaces(file2FD, &buffer2, &file2ReadIndicator, file1FD);
-            printf("%c , %c\n", buffer1, buffer2);
             buffer1 = (unsigned char) tolower(buffer1);
             buffer2 = (unsigned char) tolower(buffer2);
             if (buffer1 != buffer2) {
@@ -99,6 +97,7 @@ int main(int argc, char const *argv[])
         isIdentical = 0;
         skipWhiteSpaces(file1FD, &buffer1, &file1ReadIndicator, file2FD);
         if (!isspace(buffer1)) {
+            return DIFFERENT;
         }
     }
     if (file2ReadIndicator > 0) {
