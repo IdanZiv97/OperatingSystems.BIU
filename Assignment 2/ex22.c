@@ -11,21 +11,24 @@
 #define MAX_LEN 151 // 150 + 1 for the new line char
 #define MAX_PATH 150
 #define COMPARE "./compt.out"
+#define ERROR(str) write(2, str, strlen(str));
 
-//function to compile C file - returns error or not
-handle(char *mainDirectory, char *inputFile, char *outputFile);
+
+void handle(char *mainDirectory, char *inputFile, char *outputFile);
 //function to handle a student
-handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath, char *outputFilePath, ssize_t resultsFD, ssize_t errorsFD);
+void handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath, char *outputFilePath, ssize_t resultsFD, ssize_t errorsFD);
 int isCFile(char fileName[]);
 int compileCFile(char *filePath ,ssize_t errorsFD);
-int executeCFile(char *inputPath, ssize_t errorsFD);
+void executeCFile(char *inputPath, ssize_t errorsFD);
 void gradeStudent(char *studentName, char *grade, char *gradeDescription, ssize_t resultsFD);
+int compareOutptut(char *outputFilePath);
 
 int main(int argc, char const *argv[])
 {
     // get path to conifg file
     char pathToConigurationFiles[MAX_PATH] = {};
-    strcpy(pathToConigurationFiles, argv[1]);
+    // strcpy(pathToConigurationFiles, argv[1]);
+    strcpy(pathToConigurationFiles, "conf.txt");
     // read the paths inside the configuration files
     ssize_t configurationFD = open(pathToConigurationFiles, O_RDONLY);
     if (configurationFD == -1) {
@@ -67,7 +70,7 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
-handle(char *mainDirectory, char *inputFile, char *outputFile) {
+void handle(char *mainDirectory, char *inputFile, char *outputFile) {
     //create reference to main dir
     DIR* mainDirStream = opendir(mainDirectory);
     if (mainDirStream == NULL) {
@@ -108,9 +111,15 @@ handle(char *mainDirectory, char *inputFile, char *outputFile) {
             handleStudentFiles(currentSubDirPath, itemInFolder->d_name, inputFile, outputFile, resultsFD, errorsFD);       
         }
     }
+    // close(resultsFD);
+    // close(errorsFD);
+    // closedir(mainDirectory);
+    // remove("studentCompile.out");
+    // remove("studentOutput.txt");
+    return;
 }
 
-handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath, char *outputFilePath, ssize_t resultsFD, ssize_t errorsFD) {
+void handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath, char *outputFilePath, ssize_t resultsFD, ssize_t errorsFD) {
     //try to open the student's folder
     DIR *currentDirStream = opendir(studentDirPath);
     if (currentDirStream == NULL) {
@@ -121,12 +130,11 @@ handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath,
     }
     //iterate over the files and check for c file - one at most (hold a flag to check if the c file existed)
     int cFileExists = 0;
-    struct dirent* itemInFolder;
-    while ((itemInFolder = readdir(currentDirStream) != NULL) && !cFileExists) {
+    struct dirent *itemInFolder;
+    while ((itemInFolder = readdir(currentDirStream)) != NULL) {
         if (itemInFolder->d_type == DT_DIR) {
             continue;
         }
-        if(strcmp(itemInFolder->d_name, ".") || )
         if (itemInFolder->d_type == DT_REG) {
             if (isCFile(itemInFolder->d_name)) {
                 //create path for file
@@ -142,15 +150,25 @@ handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath,
                     continue;
                 }
                 // run c file and wait for result
-                int execiteResult = executeCFile()
+                executeCFile(inputFilePath, errorsFD);
+                int compareResult = compareOutptut(outputFilePath);
+                if (compareResult == 1) {
+                    gradeStudent(studentName, "100", "EXCELLENT", resultsFD);
+                    continue;
+                } else if (compareResult == 2) {
+                    gradeStudent(studentName, "50", "WRONG", resultsFD);
+                    continue;
+                } else if (compareResult == 3) {
+                    gradeStudent(studentName, "75", "SIMILAR", resultsFD);
+                    continue;
+                }
             }
         }
+        if (!cFileExists) {
+            gradeStudent(studentName, "0", "NO_C_FILE", resultsFD);
+        }
     }
-    //compile c file
-    //check for result in compilation
-    // if failed grade and leave
-    // if not exectue and compare
-    // grade based on ./comp.out result
+    closedir(currentDirStream);
 }
 
 
@@ -165,7 +183,7 @@ int isCFile(char fileName[]) {
     if (tmp == NULL) {
         return 0;
     } else {
-        return 0;
+        return 1;
     }
 }
 
@@ -183,15 +201,15 @@ int compileCFile(char *filePath ,ssize_t errorsFD) {
         close(errorsFD);
     } else if (forkResult == 0) { // child
         // create args for execvp
-        char *args[] = {
+        char *args[MAX_LEN] = {
             "gcc",
             filePath,
             "-o",
-            "student.out",
+            "studentCompile.out",
             NULL
         };
         if (execvp(args[0], args) == -1) {
-            write(2, "Error in: execvp\n", strlen("Error in: execvp\n"));
+            write(2, "Error in: execvp in compile\n", strlen("Error in: execvp in compile\n"));
             close(errorsFD);
             exit(-1);
         }
@@ -216,9 +234,16 @@ int compileCFile(char *filePath ,ssize_t errorsFD) {
         }
     }
 }
-
-int executeCFile(char *inputPath, ssize_t errorsFD) {
-    int forkResult = fork();
+/**
+ * @brief 
+ * 
+ * @param inputPath 
+ * @param outputPath 
+ * @param errorsFD 
+ * @return int 1 - IDENTICAL, 2 - SIMILAR, 3 - DIFFERENT
+ */
+void executeCFile(char *inputPath, ssize_t errorsFD) {
+    pid_t forkResult = fork();
     if (forkResult == -1) {
         write(2, "Error in: fork\n", strlen("Error in: fork\n"));
         close(errorsFD);
@@ -238,14 +263,77 @@ int executeCFile(char *inputPath, ssize_t errorsFD) {
             close(inputFileFD);
             exit(-1);
         }
+        //close input file
         if (close(inputFileFD) == -1) {
             write(2, "Error in: close\n", strlen("Error in: close\n"));
             close(errorsFD);
             exit(-1);
         }
         //create output
+        ssize_t outputFileFD = open("studentOutput.txt", O_WRONLY | O_CREAT, 0777 | O_APPEND);
+        if (outputFileFD == -1) {
+            write(2, "Error in: open\n", strlen("Error in: open\n"));
+            close(errorsFD);
+            exit(-1);
+        }
+        //redirect ouput
+        if (dup2(outputFileFD, 1) == -1) {
+            write(2, "Error in: dup2\n", strlen("Error in: dup2\n"));
+            close(errorsFD);
+            close(outputFileFD);
+            exit(-1);
+        }
+        //close output file
+        if (close(outputFileFD) == -1) {
+            write(2, "Error in: close\n", strlen("Error in: close\n"));
+            close(errorsFD);
+        }
+        //preprare args
+        char *args[MAX_LEN] = {
+            "./studentCompile.out",
+            NULL
+        };
+        //execute
+        if (execvp(args[0], args) == -1) {
+            write(2, "Error in: execvp in execute\n", strlen("Error in: execvp in execute\n"));
+            close(errorsFD);
+            exit(-1);
+        }
+    } else { //father
+        int status;
+        if (waitpid(forkResult, &status, 0) == -1) {
+            write(2, "Error in: waitpid\n", strlen("Error in: waitpid\n"));
+            close(errorsFD);
+            exit(-1);
+        }
+    }
+}
 
-    }   
+int compareOutptut(char *outputFilePath) {
+    pid_t forkResult = fork();
+    if (forkResult == -1) {
+        ERROR("Error in: fork\n");
+        exit(-1);
+    } else if (forkResult == 0) { // child
+        //prepare args
+        char *args[MAX_LEN] = {
+            "./comp.out",
+            outputFilePath,
+            "studentOutput.txt",
+            NULL
+        };
+        if (execvp(args[0], args) == -1) {
+            ERROR("Error in: execvp in compare\n");
+            exit(-1);
+        }
+    } else {
+        int status;
+        if (waitpid(forkResult, &status, 0) == -1) {
+            ERROR("Error in: waitpid\n");
+            exit(-1);
+        }
+        return status;
+    }
 }
 
 /**
@@ -258,13 +346,14 @@ int executeCFile(char *inputPath, ssize_t errorsFD) {
  */
 void gradeStudent(char *studentName, char *grade, char *gradeDescription, ssize_t resultsFD) {
     //create a string buffer
-    char *str;
+    char str[MAX_LEN] = {};
     //create the format from the grade string from the given parameters
     strcpy(str, studentName);
     strcat(str, ",");
     strcat(str, grade);
     strcat(str, ",");
     strcat(str, gradeDescription);
+    strcat(str, "\n");
     //write to results.csv
     write(resultsFD, str, strlen(str));
 }
