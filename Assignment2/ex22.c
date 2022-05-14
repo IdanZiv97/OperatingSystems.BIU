@@ -10,18 +10,18 @@
 // Constatnts
 #define MAX_LEN 151 // 150 + 1 for the new line char
 #define MAX_PATH 150
-#define COMPARE "./compt.out"
+#define COMPARE "./comp.out"
 #define ERROR(str) write(2, str, strlen(str));
 
 
 void handle(char *mainDirectory, char *inputFile, char *outputFile);
 //function to handle a student
-void handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath, char *outputFilePath, ssize_t resultsFD, ssize_t errorsFD);
+int handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath, char *outputFilePath, ssize_t resultsFD, ssize_t errorsFD);
 int isCFile(char fileName[]);
 int compileCFile(char *filePath ,ssize_t errorsFD);
 void executeCFile(char *inputPath, ssize_t errorsFD);
 void gradeStudent(char *studentName, char *grade, char *gradeDescription, ssize_t resultsFD);
-int compareOutptut(char *outputFilePath);
+int compareOutput(char *outputFilePath);
 
 int main(int argc, char const *argv[])
 {
@@ -108,7 +108,9 @@ void handle(char *mainDirectory, char *inputFile, char *outputFile) {
             strcpy(currentSubDirPath, mainDirectory);
             strcat(currentSubDirPath, "/");
             strcat(currentSubDirPath, itemInFolder->d_name);
-            handleStudentFiles(currentSubDirPath, itemInFolder->d_name, inputFile, outputFile, resultsFD, errorsFD);       
+            if (handleStudentFiles(currentSubDirPath, itemInFolder->d_name, inputFile, outputFile, resultsFD, errorsFD) != 1) {
+                gradeStudent(itemInFolder->d_name, "0", "NO_C_FILE", resultsFD);
+            }
         }
     }
     // close(resultsFD);
@@ -119,7 +121,7 @@ void handle(char *mainDirectory, char *inputFile, char *outputFile) {
     return;
 }
 
-void handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath, char *outputFilePath, ssize_t resultsFD, ssize_t errorsFD) {
+int handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath, char *outputFilePath, ssize_t resultsFD, ssize_t errorsFD) {
     //try to open the student's folder
     DIR *currentDirStream = opendir(studentDirPath);
     if (currentDirStream == NULL) {
@@ -146,12 +148,13 @@ void handleStudentFiles(char *studentDirPath, char *studentName, char *inputFile
                 int compilationResult = compileCFile(cFilePath, errorsFD);
                 // compilation failed
                 if (compilationResult == 0) {
-                    gradeStudent(studentName, "20", "COMPILATION_ERROR", resultsFD);
+                    gradeStudent(studentName, "10", "COMPILATION_ERROR", resultsFD);
                     continue;
                 }
                 // run c file and wait for result
                 executeCFile(inputFilePath, errorsFD);
-                int compareResult = compareOutptut(outputFilePath);
+                int compareResult = compareOutput(outputFilePath);
+                printf("compare result: %d\n", compareResult);
                 if (compareResult == 1) {
                     gradeStudent(studentName, "100", "EXCELLENT", resultsFD);
                     continue;
@@ -164,11 +167,9 @@ void handleStudentFiles(char *studentDirPath, char *studentName, char *inputFile
                 }
             }
         }
-        if (!cFileExists) {
-            gradeStudent(studentName, "0", "NO_C_FILE", resultsFD);
-        }
     }
     closedir(currentDirStream);
+    return cFileExists;
 }
 
 
@@ -179,11 +180,11 @@ void handleStudentFiles(char *studentDirPath, char *studentName, char *inputFile
  * @return int 1 if true 0 if false
  */
 int isCFile(char fileName[]) {
-    char *tmp = strstr(fileName, ".c\0");
-    if (tmp == NULL) {
-        return 0;
-    } else {
+    int len = strlen(fileName);
+    if (fileName[len] == '\0' && fileName[len - 1] == 'c' && fileName[len - 2] == '.') {
         return 1;
+    } else {
+        return 0;
     }
 }
 
@@ -221,7 +222,7 @@ int compileCFile(char *filePath ,ssize_t errorsFD) {
             exit(-1);
         }
         // check for compilation error
-        if (WIFEXITED(status) == 0) { //compilation failed
+        if (WEXITSTATUS(status) != 0) { //compilation failed
             // write error to errors.txt
             if (dup2(errorsFD, 2) == -1) {
                 write(2, "Error in: dup2\n", strlen("Error in: dup2\n"));
@@ -270,7 +271,7 @@ void executeCFile(char *inputPath, ssize_t errorsFD) {
             exit(-1);
         }
         //create output
-        ssize_t outputFileFD = open("studentOutput.txt", O_WRONLY | O_CREAT, 0777 | O_APPEND);
+        ssize_t outputFileFD = open("studentOutput.txt", O_WRONLY | O_CREAT, 0777);
         if (outputFileFD == -1) {
             write(2, "Error in: open\n", strlen("Error in: open\n"));
             close(errorsFD);
@@ -309,7 +310,7 @@ void executeCFile(char *inputPath, ssize_t errorsFD) {
     }
 }
 
-int compareOutptut(char *outputFilePath) {
+int compareOutput(char *outputFilePath) {
     pid_t forkResult = fork();
     if (forkResult == -1) {
         ERROR("Error in: fork\n");
@@ -322,7 +323,7 @@ int compareOutptut(char *outputFilePath) {
             "studentOutput.txt",
             NULL
         };
-        if (execvp(args[0], args) == -1) {
+        if (execvp(COMPARE, args) == -1) {
             ERROR("Error in: execvp in compare\n");
             exit(-1);
         }
@@ -332,7 +333,9 @@ int compareOutptut(char *outputFilePath) {
             ERROR("Error in: waitpid\n");
             exit(-1);
         }
-        return status;
+        printf("%ld\n", status);
+        printf("%ld\n", WEXITSTATUS(status));
+        return WEXITSTATUS(status);
     }
 }
 
