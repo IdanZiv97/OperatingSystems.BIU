@@ -1,3 +1,4 @@
+// Idan Ziv 318175197
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -12,18 +13,24 @@
 #define ERROR(str) write(STDERR_FILENO, str, strlen(str));
 #define ERR -1
 /**
- * This function reads the file to the next non space char or EOF 
- **/
+ * @brief This function advances the file reading through all the whitespaces (including newline character)
+ * @param fileFD
+ * @param buffer 
+ */
 void skipWhiteSpaces(int fileFD, char* buffer);
-
+/**
+ * @brief closes files
+ * @param file1FD 
+ * @param file2FD 
+ */
 void closeFiles(int file1FD, int file2FD);
 
 
 int main(int argc, char const *argv[])
 {
     if (argc != 3) {
-        perror("Not enough arguments\n");
-        exit(0);
+        ERROR("Not enough arguments\n");
+        exit(ERR);
     }
     char file1Path[PATH_MAX] = {};
     strcpy(file1Path, argv[1]);
@@ -121,7 +128,7 @@ void skipWhiteSpaces(int fileFD, char* buffer) {
 
 void closeFiles(int file1FD, int file2FD) {
     if (close(file1FD) == ERR || close(file2FD) == ERR) {
-        ERROR("Error in: cloes\n");
+        ERROR("Error in: close\n");
         exit(ERR);
     }
 }
