@@ -23,13 +23,7 @@
 /**
  * This function reads the file to the next non space char or EOF 
  **/
-void skipWhiteSpaces(int fileFD, char* buffer, ssize_t* fileReadIndicator, int otherFileFD);
-/**
- * Handles the reminder
- * In case the reminder has something other than whitespaces it will check for the same char
- * If the char is different it will return DIFFERENT, else return SIMILAR
- **/
-int handleReminder(int file1FD, char* buffer1, ssize_t* file1ReadIndicator, int file2FD, char* buffer2, int* file2ReadIndicator);
+void skipWhiteSpaces(int fileFD, char* buffer);
 
 void closeFiles(int file1FD, int file2FD);
 
@@ -71,8 +65,8 @@ int main(int argc, char const *argv[])
     while (file1ReadIndicator > 0 && file2ReadIndicator > 0) {
         if (buffer1 != buffer2) {
             isIdentical = 0;
-            skipWhiteSpaces(file1FD, &buffer1, &file1ReadIndicator, file2FD);
-            skipWhiteSpaces(file2FD, &buffer2, &file2ReadIndicator, file1FD);
+            skipWhiteSpaces(file1FD, &buffer1);
+            skipWhiteSpaces(file2FD, &buffer2);
             buffer1 = (unsigned char) tolower(buffer1);
             buffer2 = (unsigned char) tolower(buffer2);
             if (buffer1 != buffer2) {
@@ -95,14 +89,14 @@ int main(int argc, char const *argv[])
     // a non-whitespace character
     if (file1ReadIndicator > 0) {
         isIdentical = 0;
-        skipWhiteSpaces(file1FD, &buffer1, &file1ReadIndicator, file2FD);
+        skipWhiteSpaces(file1FD, &buffer1);
         if (!isspace(buffer1)) {
             return DIFFERENT;
         }
     }
     if (file2ReadIndicator > 0) {
         isIdentical = 0;
-        skipWhiteSpaces(file2FD, &buffer2, &file2ReadIndicator, file1FD);
+        skipWhiteSpaces(file2FD, &buffer2);
         if (!isspace(buffer2)) {
             return DIFFERENT;
         }
@@ -118,14 +112,12 @@ int main(int argc, char const *argv[])
 }
 
 
-void skipWhiteSpaces(int fileFD, char* buffer, ssize_t* fileReadIndicator, int otherFileFD) {
+void skipWhiteSpaces(int fileFD, char* buffer) {
+    ssize_t readResult;
     while (isspace(*buffer)) {
-        *fileReadIndicator = read(fileFD, buffer, 1);
-        if (*fileReadIndicator == -1) {
-            perror("Failed to read from file!\n");
-            closeFiles(fileFD, otherFileFD);
-        }
-        if (*fileReadIndicator == 0) {
+        readResult = read(fileFD, buffer, 1);
+        // handle case where we reached EOF
+        if (readResult == 0) {
             break;
         }
     }
