@@ -9,17 +9,6 @@
 #define SIMILAR 3
 #define DIFFERENT 2
 #define PATH_MAX 1024
-    // intilise
-        // pointer to flag called identical
-    //loop - start
-        // while chars equal continue read
-        // if not equal
-            // 1. read until not white space - for both spaces
-            // 2. to lower case
-
-    // go throught reminder - if different return different
-    // if identical - return identical
-    // else similiar
 /**
  * This function reads the file to the next non space char or EOF 
  **/

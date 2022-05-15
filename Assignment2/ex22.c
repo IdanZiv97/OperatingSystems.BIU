@@ -169,6 +169,11 @@ int handleStudentFiles(char *studentDirPath, char *studentName, char *inputFileP
         }
     }
     closedir(currentDirStream);
+    if (unlink("studentOutput.txt") == -1) {
+    ERROR("Error in: unlink\n");
+    close(errorsFD);
+    close(resultsFD);
+    }
     return cFileExists;
 }
 
