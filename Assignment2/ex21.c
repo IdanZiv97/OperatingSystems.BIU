@@ -9,6 +9,8 @@
 #define SIMILAR 3
 #define DIFFERENT 2
 #define PATH_MAX 1024
+#define ERROR(str) write(STDERR_FILENO, str, strlen(str));
+#define ERR -1
 /**
  * This function reads the file to the next non space char or EOF 
  **/
@@ -28,26 +30,29 @@ int main(int argc, char const *argv[])
     char file2Path[PATH_MAX] = {};
     strcpy(file2Path, argv[2]);
     ssize_t file1FD = open(file1Path, O_RDONLY);
-    if (file1FD == -1) {
-        perror("Failed to open file 1\n");
+    if (file1FD == ERR) {
+        ERROR("Error in: open\n");
+        exit(ERR);
     }
     ssize_t file2FD = open(file2Path, O_RDONLY);
-    if (file2FD == -1) {
-        perror("Failed to open file 1\n");
+    if (file2FD == ERR) {
+        ERROR("Error in: open\n");
+        close(file1FD);
+        exit(ERR);
     }
     // buffer for read input
     char buffer1 = 0;
     char buffer2 = 0;
     int isIdentical = 1;
     int file1ReadIndicator = read(file1FD, &buffer1, 1);
-    if (file1ReadIndicator == -1) {
-        perror("Failed to read from file 1\n");
+    if (file1ReadIndicator == ERR) {
+        ERROR("Error in: read\n");
         closeFiles(file1FD, file2FD);
-        exit(0);
+        exit(ERR);
     }
     int file2ReadIndicator = read(file2FD, &buffer2, 1);
     if (file2ReadIndicator == -1) {
-        perror("Failed to read from file 2\n");
+        ERROR("Error in: read\n");
         closeFiles(file1FD, file2FD);
         exit(0);
     }
@@ -65,13 +70,15 @@ int main(int argc, char const *argv[])
         }
         file1ReadIndicator = read(file1FD, &buffer1, 1);
         if (file1ReadIndicator == -1) {
-            perror("failed to read from file\n");
+            ERROR("Error in: read\n");
             closeFiles(file1FD, file2FD);
+            exit(ERR);
         }
         file2ReadIndicator = read(file2FD, &buffer2, 1);
         if (file2ReadIndicator == -1) {
-            perror("failed to read from file\n");
+            ERROR("Error in: read\n");
             closeFiles(file1FD, file2FD);
+            exit(ERR);
         }
     }
     // handleReminder - at this point the files are either similar or different. depends if the reminders conatain
@@ -113,12 +120,8 @@ void skipWhiteSpaces(int fileFD, char* buffer) {
 }
 
 void closeFiles(int file1FD, int file2FD) {
-    if (close(file1FD) == -1) {
-        perror("failed closing files");
-        exit(0);
-    }
-    if (close(file2FD) == -1) {
-        perror("failed closing files");
-        exit(0);
+    if (close(file1FD) == ERR || close(file2FD) == ERR) {
+        ERROR("Error in: cloes\n");
+        exit(ERR);
     }
 }
