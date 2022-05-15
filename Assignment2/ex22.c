@@ -70,6 +70,7 @@ int main(int argc, char const *argv[])
     }
     // main work is done here
     handle(mainDirectoryPath, inputFilePath, expectedOutputPath);
+    // need to delete files
     return 0;
 }
 
@@ -135,6 +136,13 @@ void handle(char *mainDirectory, char *inputFile, char *outputFile) {
         ERROR("Error in: closedir\n");
         close(resultsFD);
         close(errorsFD);
+        exit(ERR);
+    }
+    if (unlink("studentCompile.out") == ERR) {
+        ERROR("Error in: unlink\n");
+        close(resultsFD);
+        close(errorsFD);
+        exit(ERR);
     }
 }
 
