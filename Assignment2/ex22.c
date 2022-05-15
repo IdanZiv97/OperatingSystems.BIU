@@ -27,8 +27,8 @@ int main(int argc, char const *argv[])
 {
     // get path to conifg file
     char pathToConigurationFiles[MAX_PATH] = {};
-    // strcpy(pathToConigurationFiles, argv[1]);
-    strcpy(pathToConigurationFiles, "conf.txt");
+    strcpy(pathToConigurationFiles, argv[1]);
+    //strcpy(pathToConigurationFiles, "conf.txt");
     // read the paths inside the configuration files
     ssize_t configurationFD = open(pathToConigurationFiles, O_RDONLY);
     if (configurationFD == -1) {
@@ -91,6 +91,16 @@ void handle(char *mainDirectory, char *inputFile, char *outputFile) {
         closedir(mainDirStream);
         close(resultsFD);
     }
+    // write error to errors.txt
+    if (dup2(errorsFD, 2) == -1) {
+        write(2, "Error in: dup2\n", strlen("Error in: dup2\n"));
+        close(errorsFD);
+        exit(-1);
+    }
+    if (close(errorsFD) == -1) {
+        ERROR("Error in: close\n");
+        exit(-1);
+    }
     // fetch all the items in the directory
     struct dirent *itemInFolder;
     while ((itemInFolder = readdir(mainDirStream)) != NULL) {
@@ -113,11 +123,6 @@ void handle(char *mainDirectory, char *inputFile, char *outputFile) {
             }
         }
     }
-    // close(resultsFD);
-    // close(errorsFD);
-    // closedir(mainDirectory);
-    // remove("studentCompile.out");
-    // remove("studentOutput.txt");
     return;
 }
 
@@ -154,26 +159,38 @@ int handleStudentFiles(char *studentDirPath, char *studentName, char *inputFileP
                 // run c file and wait for result
                 executeCFile(inputFilePath, errorsFD);
                 int compareResult = compareOutput(outputFilePath);
-                printf("compare result: %d\n", compareResult);
                 if (compareResult == 1) {
                     gradeStudent(studentName, "100", "EXCELLENT", resultsFD);
+                    if (unlink("studentOutput.txt") == -1) {
+                        ERROR("Error in: unlink\n");
+                        close(errorsFD);
+                        close(resultsFD);
+                        exit(-1);
+                    }
                     continue;
                 } else if (compareResult == 2) {
                     gradeStudent(studentName, "50", "WRONG", resultsFD);
+                    if (unlink("studentOutput.txt") == -1) {
+                        ERROR("Error in: unlink\n");
+                        close(errorsFD);
+                        close(resultsFD);
+                        exit(-1);
+                    }
                     continue;
                 } else if (compareResult == 3) {
                     gradeStudent(studentName, "75", "SIMILAR", resultsFD);
+                    if (unlink("studentOutput.txt") == -1) {
+                        ERROR("Error in: unlink\n");
+                        close(errorsFD);
+                        close(resultsFD);
+                        exit(-1);
+                    }
                     continue;
                 }
             }
         }
     }
     closedir(currentDirStream);
-    if (unlink("studentOutput.txt") == -1) {
-    ERROR("Error in: unlink\n");
-    close(errorsFD);
-    close(resultsFD);
-    }
     return cFileExists;
 }
 
@@ -228,12 +245,6 @@ int compileCFile(char *filePath ,ssize_t errorsFD) {
         }
         // check for compilation error
         if (WEXITSTATUS(status) != 0) { //compilation failed
-            // write error to errors.txt
-            if (dup2(errorsFD, 2) == -1) {
-                write(2, "Error in: dup2\n", strlen("Error in: dup2\n"));
-                close(errorsFD);
-                exit(-1);
-            }
             return 0;
         } else { // file compiled successfully
             return 1;
@@ -301,7 +312,7 @@ void executeCFile(char *inputPath, ssize_t errorsFD) {
         };
         //execute
         if (execvp(args[0], args) == -1) {
-            write(2, "Error in: execvp in execute\n", strlen("Error in: execvp in execute\n"));
+            ERROR("Error in: execvp\n");
             close(errorsFD);
             exit(-1);
         }
@@ -328,7 +339,7 @@ int compareOutput(char *outputFilePath) {
             "studentOutput.txt",
             NULL
         };
-        if (execvp(COMPARE, args) == -1) {
+        if (execvp(args[0], args) == -1) {
             ERROR("Error in: execvp in compare\n");
             exit(-1);
         }
@@ -338,8 +349,6 @@ int compareOutput(char *outputFilePath) {
             ERROR("Error in: waitpid\n");
             exit(-1);
         }
-        printf("%ld\n", status);
-        printf("%ld\n", WEXITSTATUS(status));
         return WEXITSTATUS(status);
     }
 }
