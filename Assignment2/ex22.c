@@ -15,55 +15,12 @@
 #define ERROR(str) write(STDERR_FILENO, str, strlen(str));
 #define ERR -1
 
-/**
- * @brief function that initiate the buisness logic
- * @param mainDirectory main directory path
- * @param inputFile input file
- * @param outputFile correct output path
- */
 void handle(char *mainDirectory, char *inputFile, char *outputFile);
-/**
- * @brief iterates a specific student's files. resposible of grading the students work
- * 
- * @param studentDirPath path to current student's directory
- * @param studentName
- * @param inputFilePath 
- * @param outputFilePath 
- * @param resultsFD student's grade will be written to this file
- * @return int 1 if the student had a C file, 0 if not
- */
 int handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath, char *outputFilePath, ssize_t resultsFD);
-/**
- * @brief checks if a file is a C file
- * @param fileName
- * @return int return 1 if the the file is a C file, else it returns 0
- */
 int isCFile(char fileName[]);
-/**
- * @brief compiles a given C file
- * 
- * @param filePath path to the C file
- * @return int returns 1 if compilation is succesful, else it returns 0
- */
 int compileCFile(char *filePath);
-/**
- * @brief executes a compiled C file
- * @param inputPath path to input file
- */
 void executeCFile(char *inputPath);
-/**
- * @brief Grades a student based on the result of ./comp.out
- * @param studentName 
- * @param grade 
- * @param gradeDescription 
- * @param resultsFD 
- */
 void gradeStudent(char *studentName, char *grade, char *gradeDescription, ssize_t resultsFD);
-/**
- * @brief comparing the output of the student and the correct output file given in the config file
- * @param outputFilePath correct output path
- * @return int the comparison result of ./comp.out
- */
 int compareOutput(char *outputFilePath);
 
 int main(int argc, char const *argv[])
@@ -116,6 +73,12 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
+/**
+ * @brief function that initiate the buisness logic
+ * @param mainDirectory main directory path
+ * @param inputFile input file
+ * @param outputFile correct output path
+ */
 void handle(char *mainDirectory, char *inputFile, char *outputFile) {
     //create reference to main dir
     DIR* mainDirStream = opendir(mainDirectory);
@@ -188,6 +151,16 @@ void handle(char *mainDirectory, char *inputFile, char *outputFile) {
     }
 }
 
+/**
+ * @brief iterates a specific student's files. resposible of grading the students work
+ * 
+ * @param studentDirPath path to current student's directory
+ * @param studentName
+ * @param inputFilePath 
+ * @param outputFilePath 
+ * @param resultsFD student's grade will be written to this file
+ * @return int 1 if the student had a C file, 0 if not
+ */
 int handleStudentFiles(char *studentDirPath, char *studentName, char *inputFilePath, char *outputFilePath, ssize_t resultsFD) {
     //try to open the student's folder
     DIR *currentDirStream = opendir(studentDirPath);
@@ -258,10 +231,9 @@ int handleStudentFiles(char *studentDirPath, char *studentName, char *inputFileP
 
 
 /**
- * @brief function to check if a file is c file.
- * each c file ends with ".c\0" so lets check if the string ".cֿֿ\0" is a substring of the file name
- * @param fileName 
- * @return int 1 if true 0 if false
+ * @brief checks if a file is a C file
+ * @param fileName
+ * @return int return 1 if the the file is a C file, else it returns 0
  */
 int isCFile(char fileName[]) {
     int len = strlen(fileName);
@@ -273,11 +245,10 @@ int isCFile(char fileName[]) {
 }
 
 /**
- * @brief function to compile c files
+ * @brief compiles a given C file
  * 
- * @param filePath 
- * @param errorsFD 
- * @return int 
+ * @param filePath path to the C file
+ * @return int returns 1 if compilation is succesful, else it returns 0
  */
 int compileCFile(char *filePath) {
     pid_t forkResult = fork();
@@ -311,13 +282,10 @@ int compileCFile(char *filePath) {
         }
     }
 }
+
 /**
- * @brief 
- * 
- * @param inputPath 
- * @param outputPath 
- * @param errorsFD 
- * @return int 1 - IDENTICAL, 2 - SIMILAR, 3 - DIFFERENT
+ * @brief executes a compiled C file
+ * @param inputPath path to input file
  */
 void executeCFile(char *inputPath) {
     pid_t forkResult = fork();
@@ -377,6 +345,11 @@ void executeCFile(char *inputPath) {
     }
 }
 
+/**
+ * @brief comparing the output of the student and the correct output file given in the config file
+ * @param outputFilePath correct output path
+ * @return int the comparison result of ./comp.out
+ */
 int compareOutput(char *outputFilePath) {
     pid_t forkResult = fork();
     if (forkResult == ERR) {
@@ -405,8 +378,7 @@ int compareOutput(char *outputFilePath) {
 }
 
 /**
- * @brief writes the grade to results.csv
- * 
+ * @brief Grades a student based on the result of ./comp.out
  * @param studentName 
  * @param grade 
  * @param gradeDescription 

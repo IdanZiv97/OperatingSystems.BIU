@@ -12,17 +12,8 @@
 #define PATH_MAX 1024
 #define ERROR(str) write(STDERR_FILENO, str, strlen(str));
 #define ERR -1
-/**
- * @brief This function advances the file reading through all the whitespaces (including newline character)
- * @param fileFD
- * @param buffer 
- */
+
 void skipWhiteSpaces(int fileFD, char* buffer);
-/**
- * @brief closes files
- * @param file1FD 
- * @param file2FD 
- */
 void closeFiles(int file1FD, int file2FD);
 
 
@@ -114,7 +105,11 @@ int main(int argc, char const *argv[])
     }
 }
 
-
+/**
+ * @brief This function advances the file reading through all the whitespaces (including newline character)
+ * @param fileFD
+ * @param buffer 
+ */
 void skipWhiteSpaces(int fileFD, char* buffer) {
     ssize_t readResult;
     while (isspace(*buffer)) {
@@ -126,6 +121,11 @@ void skipWhiteSpaces(int fileFD, char* buffer) {
     }
 }
 
+/**
+ * @brief closes files
+ * @param file1FD 
+ * @param file2FD 
+ */
 void closeFiles(int file1FD, int file2FD) {
     if (close(file1FD) == ERR || close(file2FD) == ERR) {
         ERROR("Error in: close\n");
