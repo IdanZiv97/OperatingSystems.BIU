@@ -1,4 +1,4 @@
-#include <Queues.hpp>
+#include "Queues.hpp"
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -132,13 +132,13 @@ int main(int argc, char const *argv[]) {
    }
    // creating producer threads
    for (int index = 0; index < maxArticles.size(); index++) {
-       thread producerThread(producer, maxArticles.at(index), index);
+       std::thread t1(producer, maxArticles.at(index), index);
    }
    // createing dispatcher thread
-   thread dispatcherThread(dispatcher);
+   std::thread t2(dispatcher);
    // creating co editors threads
    for (auto q : dispatcherQueues) {
-       thread coEditorThread(coEditor, q);
+       std::thread t3(coEditor, q);
    }
     // screen manager code
     int numOfDones = 0;

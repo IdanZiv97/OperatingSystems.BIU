@@ -2,6 +2,7 @@
 #define QUEUES_HPP
 
 #include <vector>
+#include <iostream>
 #include <queue>
 #include <string>
 #include <mutex>
@@ -30,35 +31,51 @@ class BoundedQueue {
         sem_t _full, _empty;
     public:
         BoundedQueue(int s): _size(s) {
-            sem_init(&_full, 1, 0);
-            sem_init(&_empty, 1, _size);
+            sem_init((&this->_full), 0, 0);
+            sem_init((&this->_empty), 0, this->_size);
         }
         void insert(article a) {
-            // _full++; - if too full wait
-            // lock mutex
+            // check if queue is empty
+            sem_wait(&_empty);
+            _occupied.lock();
             _container.push(a);
-            // decrement empty - indiate there are less open spaces
-            // unlock mutex
+            _occupied.unlock();
+            sem_post(&_full);
         }
 
         article remove() {
-            // check if empty - wait until not
-            // lock mutex
+            sem_wait(&_full);
+            _occupied.lock();
             article data = _container.front();
             _container.pop();
-            // increase number of empty slots in queue
-            // unlock mutex
+            _occupied.unlock();
+            sem_post(&_empty);
             return data;
         }
-        bool isEmpty() {
-            return _container.empty();
-        }
-
 };
 
 class UnboundedQueue {
+    private:
+        queue<article> _container;
+        mutex _occupied;
+        sem_t _full;
     public:
-        void push(article a);
-        article remove();
+        UnboundedQueue() {
+            sem_init((&this->_full), 0, 0);
+        }
+        void push(article a) {
+            _occupied.lock();
+            _container.push(a);
+            _occupied.unlock();
+            sem_post(&_full);
+        }
+        article remove() {
+            sem_wait(&_full);
+            _occupied.lock();
+            article data = _container.front();
+            _container.pop();
+            _occupied.unlock();
+            return data;
+        }
 };
 #endif
