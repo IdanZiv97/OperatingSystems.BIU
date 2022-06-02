@@ -1,126 +1,127 @@
 #include "Queues.hpp"
 #include <fstream>
-#include <sstream>
-#include <string>
-#include <iostream>
 #include <thread>
 #include <list>
+#include <time.h>
+#include <stdlib.h>
 #include <unistd.h>
+
 using namespace std;
+
 void producer(int maxArticles, int index);
 void dispatcher();
 void screenManager();
-void coEditor(UnboundedQueue *q);
+void coEditor(UnboundedQueue *category);
 
 vector<BoundedQueue *> producersQueues;
 vector<int> maxArticles;
+
 /**
- * dispatcherQueues:
- * index 0 - NEWS
- * index 1 - SPORTS
- * index 2 - WEATHER
+ * categories:
+ * index 0 - NEWS queue
+ * index 1 - SPORTS queue
+ * index 2 - WEATHER queue
  */
-UnboundedQueue *dispatcherQueues[3] = {
+UnboundedQueue *categories[3] = {
     new UnboundedQueue(),
     new UnboundedQueue(),
     new UnboundedQueue(),
 };
 
-BoundedQueue *screenManagerQueue;
+BoundedQueue *broadcastReady;
 
-list<thread> threads;
+list<thread> threadsPool;
 
 int main(int argc, char const *argv[])
 {
-    /**
-     * code to read from input file
-     * this code creates all the shared queues
-     */
-    fstream file(argv[1]);
-    if (!file.is_open())
+    // reading the config file
+    fstream config(argv[1]);
+    if (!config.is_open())
     {
         cout << "failed to open file" << endl;
         return 1;
     }
     int coEditorSize;
     int producerMaxArticle;
-    int sizeOfQueue;
+    int queueCapacity;
     string line1, line2, line3;
-    while (getline(file, line1))
+    while (getline(config, line1))
     {
         if (line1.empty() || line1 == " ")
         {
             continue;
         }
-        if (!getline(file, line2) || !getline(file, line3))
+        if (!getline(config, line2) || !getline(config, line3))
         {
             coEditorSize = stoi(line1);
-            screenManagerQueue = new BoundedQueue(coEditorSize);
+            broadcastReady = new BoundedQueue(coEditorSize);
             break;
         }
         producerMaxArticle = stoi(line2);
         maxArticles.push_back(producerMaxArticle);
-        sizeOfQueue = stoi(line3);
-        producersQueues.push_back(new BoundedQueue(sizeOfQueue));
+        queueCapacity = stoi(line3);
+        producersQueues.push_back(new BoundedQueue(queueCapacity));
     }
     // creating producer threads
     for (int index = 0; index < maxArticles.size(); index++)
     {
-        std::thread t1(producer, maxArticles.at(index), index);
-        threads.push_back(move(t1));
+        std::thread producerThread(producer, maxArticles.at(index), index);
+        threadsPool.push_back(move(producerThread));
     }
-    //    createing dispatcher thread
-    std::thread t2(dispatcher);
-    threads.push_back(move(t2));
+    // createing dispatcher thread
+    std::thread dispatcherThread(dispatcher);
+    threadsPool.push_back(move(dispatcherThread));
     // creating co editors threads
-    for (auto q : dispatcherQueues) {
-        thread t3(coEditor, q);
-        threads.push_back(move(t3));
+    for (auto category : categories)
+    {
+        thread coEditorThread(coEditor, category);
+        threadsPool.push_back(move(coEditorThread));
     }
     // screen manager code
-    thread t4(screenManager);
-    threads.push_back(move(t4));
-    list<thread>::reverse_iterator i = threads.rbegin();
-    while (i != threads.rend())
+    thread screenManagerThread(screenManager);
+    threadsPool.push_back(move(screenManagerThread));
+    // join threads from the last thread to the first
+    list<thread>::reverse_iterator currentThread = threadsPool.rbegin();
+    while (currentThread != threadsPool.rend())
     {
-        i->join();
-        i++;
+        currentThread->join();
+        currentThread++;
     }
     cout << "DONE" << endl;
     return 0;
 }
 
-
 /**
- * @brief
- *
+ * @brief producer behaviour:
+ * Creates articles from 3 categories: NEWS, SPORTS, WEATHER
  * @param numOfArticles - number of articles it can produces
  * @param index - its index
  */
 void producer(int maxArticles, int index)
 {
     int articlesProduced = 0, newsArticles = 0, sportsArticles = 0, weatherArticles = 0;
-    int modulo;
+    srand(time(NULL));
+    int randomChoice;
     string category;
     while (articlesProduced < maxArticles)
     {
         // detrmine the category
-        modulo = articlesProduced % 3;
-        if (modulo == 0)
+        randomChoice = rand() % 3 + 1;
+        if (randomChoice == 1)
         {
             article a(index, "NEWS", newsArticles);
             producersQueues.at(index)->insert(a);
             newsArticles++;
             articlesProduced++;
         }
-        else if (modulo == 1)
+        else if (randomChoice == 2)
         {
             article a(index, "SPRORTS", sportsArticles);
             producersQueues.at(index)->insert(a);
             sportsArticles++;
             articlesProduced++;
         }
-        else
+        else // randomChoice == 3
         {
             article a(index, "WEATHER", weatherArticles);
             producersQueues.at(index)->insert(a);
@@ -132,7 +133,13 @@ void producer(int maxArticles, int index)
     article a(-1, "DONE", -1);
     producersQueues.at(index)->insert(a);
 }
-
+/**
+ * @brief The dispatcher is responsible of sorting the articles produced by each producer to the
+ * appropriate queue, according to the article's category.
+ * The dispatcher iterates the producers queues in a "round robin" manner:
+ * As long as the queue contains articles, the dispatcher will remove it.
+ * When the queue is empty the dispatcher will proceed to the next valid queue.
+ */
 void dispatcher()
 {
     int numOfProducers = producersQueues.size();
@@ -148,7 +155,6 @@ void dispatcher()
         {
             if (!isDone.at(i))
             {
-                while (!producersQueues.at(i)->isEmpty()) {
                     // pop the article
                     article a = producersQueues.at(i)->remove();
                     // check if done
@@ -160,50 +166,50 @@ void dispatcher()
                     }
                     else if (category == "NEWS")
                     {
-                        dispatcherQueues[0]->push(a);
+                        categories[0]->push(a);
                     }
                     else if (category == "SPORTS")
                     {
-                        dispatcherQueues[1]->push(a);
+                        categories[1]->push(a);
                     }
-                    else
-                    { // category == "WEATHER"
-                        dispatcherQueues[2]->push(a);
+                    else // category == "WEATHER"
+                    { 
+                        categories[2]->push(a);
                     }
-                }
             }
         }
     }
     // now we are done with all the queues so we can push done to all dispatcher queues
     article done(-1, "DONE", -1);
-    for (auto q : dispatcherQueues)
+    for (auto q : categories)
     {
         q->push(done);
     }
 }
 
-void coEditor(UnboundedQueue *q)
+void coEditor(UnboundedQueue *category)
 {
-    article a = q->remove();
+    article a = category->remove();
     while (a.category != "DONE")
     {
-        screenManagerQueue->insert(a);
+        broadcastReady->insert(a);
         sleep(0.1);
-        a = q->remove();
+        a = category->remove();
     }
-    screenManagerQueue->insert(a);
+    broadcastReady->insert(a);
 }
 
-void screenManager(){
+void screenManager()
+{
     int numOfDones = 0;
     while (numOfDones != 3)
     {
-        article a = screenManagerQueue->remove();
+        article a = broadcastReady->remove();
         if (a.category == "DONE")
         {
             numOfDones++;
             continue;
         }
-        a.print();
+        a.broadcastArticle();
     }
 }

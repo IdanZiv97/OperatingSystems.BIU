@@ -7,18 +7,21 @@
 #include <string>
 #include <mutex>
 #include "semaphore.h"
+
 using namespace std;
 
 struct article {
     int producer;
     string category;
     int index;
+
     article(int p, string c, int i) {
         producer = p + 1;
         category = c;
         index = i;
     }
-    void print() {
+    
+    void broadcastArticle() {
         cout << "Producer " << producer << " " << category << " " << index << endl;
     }
 };
@@ -26,13 +29,13 @@ struct article {
 class BoundedQueue {
     private:
         queue<article> _container;
-        int _size;
+        int _capacity;
         std::mutex _occupied;
         sem_t _full, _empty;
     public:
-        BoundedQueue(int s): _size(s) {
+        BoundedQueue(int c): _capacity(c) {
             sem_init((&this->_full), 0, 0);
-            sem_init((&this->_empty), 0, 4);
+            sem_init((&this->_empty), 0, c);
         }
         void insert(article a) {
             // check if queue is empty
