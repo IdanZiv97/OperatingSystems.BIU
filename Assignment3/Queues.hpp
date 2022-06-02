@@ -52,6 +52,10 @@ class BoundedQueue {
             sem_post(&_empty);
             return data;
         }
+
+        bool isEmpty() {
+            return _container.empty();
+        }
 };
 
 class UnboundedQueue {
@@ -76,6 +80,9 @@ class UnboundedQueue {
             _container.pop();
             _occupied.unlock();
             return data;
+        }
+        bool isEmpty() {
+            return _container.empty();
         }
 };
 #endif

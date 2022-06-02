@@ -9,6 +9,7 @@
 using namespace std;
 void producer(int maxArticles, int index);
 void dispatcher();
+void screenManager();
 void coEditor(UnboundedQueue *q);
 
 vector<BoundedQueue *> producersQueues;
@@ -28,6 +29,68 @@ UnboundedQueue *dispatcherQueues[3] = {
 BoundedQueue *screenManagerQueue;
 
 list<thread> threads;
+
+int main(int argc, char const *argv[])
+{
+    /**
+     * code to read from input file
+     * this code creates all the shared queues
+     */
+    fstream file(argv[1]);
+    if (!file.is_open())
+    {
+        cout << "failed to open file" << endl;
+        return 1;
+    }
+    int coEditorSize;
+    int producerMaxArticle;
+    int sizeOfQueue;
+    string line1, line2, line3;
+    while (getline(file, line1))
+    {
+        if (line1.empty() || line1 == " ")
+        {
+            continue;
+        }
+        if (!getline(file, line2) || !getline(file, line3))
+        {
+            coEditorSize = stoi(line1);
+            screenManagerQueue = new BoundedQueue(coEditorSize);
+            break;
+        }
+        producerMaxArticle = stoi(line2);
+        maxArticles.push_back(producerMaxArticle);
+        sizeOfQueue = stoi(line3);
+        producersQueues.push_back(new BoundedQueue(sizeOfQueue));
+    }
+    // creating producer threads
+    for (int index = 0; index < maxArticles.size(); index++)
+    {
+        std::thread t1(producer, maxArticles.at(index), index);
+        threads.push_back(move(t1));
+    }
+    //    createing dispatcher thread
+    std::thread t2(dispatcher);
+    threads.push_back(move(t2));
+    // creating co editors threads
+    for (auto q : dispatcherQueues) {
+        thread t3(coEditor, q);
+        threads.push_back(move(t3));
+    }
+    // screen manager code
+    thread t4(screenManager);
+    threads.push_back(move(t4));
+    list<thread>::reverse_iterator i = threads.rbegin();
+    while (i != threads.rend())
+    {
+        i->join();
+        i++;
+    }
+    cout << "DONE" << endl;
+    return 0;
+}
+
+
 /**
  * @brief
  *
@@ -129,54 +192,7 @@ void coEditor(UnboundedQueue *q)
     screenManagerQueue->insert(a);
 }
 
-int main(int argc, char const *argv[])
-{
-    /**
-     * code to read from input file
-     * this code creates all the shared queues
-     */
-    fstream file(argv[1]);
-    if (!file.is_open())
-    {
-        cout << "failed to open file" << endl;
-        return 1;
-    }
-    int coEditorSize;
-    int producerMaxArticle;
-    int sizeOfQueue;
-    string line1, line2, line3;
-    while (getline(file, line1))
-    {
-        if (line1.empty() || line1 == " ")
-        {
-            continue;
-        }
-        if (!getline(file, line2) || !getline(file, line3))
-        {
-            coEditorSize = stoi(line1);
-            screenManagerQueue = new BoundedQueue(coEditorSize);
-            break;
-        }
-        producerMaxArticle = stoi(line2);
-        maxArticles.push_back(producerMaxArticle);
-        sizeOfQueue = stoi(line3);
-        producersQueues.push_back(new BoundedQueue(sizeOfQueue));
-    }
-    // creating producer threads
-    for (int index = 0; index < maxArticles.size(); index++)
-    {
-        std::thread t1(producer, maxArticles.at(index), index);
-        threads.push_back(move(t1));
-    }
-    //    createing dispatcher thread
-    std::thread t2(dispatcher);
-    threads.push_back(move(t2));
-    // creating co editors threads
-    for (auto q : dispatcherQueues) {
-        thread t3(coEditor, q);
-        threads.push_back(move(t3));
-    }
-    // screen manager code
+void screenManager(){
     int numOfDones = 0;
     while (numOfDones != 3)
     {
@@ -188,12 +204,4 @@ int main(int argc, char const *argv[])
         }
         a.print();
     }
-    list<thread>::reverse_iterator i = threads.rbegin();
-    while (i != threads.rend())
-    {
-        i->join();
-        i++;
-    }
-    cout << "DONE" << endl;
-    return 0;
 }
