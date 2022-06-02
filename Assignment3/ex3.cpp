@@ -148,26 +148,28 @@ void dispatcher()
         {
             if (!isDone.at(i))
             {
-                // pop the article
-                article a = producersQueues.at(i)->remove();
-                // check if done
-                string category = a.category;
-                if (category == "DONE")
-                {
-                    isDone.at(i) = true;
-                    numOfDoneProducers++;
-                }
-                else if (category == "NEWS")
-                {
-                    dispatcherQueues[0]->push(a);
-                }
-                else if (category == "SPORTS")
-                {
-                    dispatcherQueues[1]->push(a);
-                }
-                else
-                { // category == "WEATHER"
-                    dispatcherQueues[2]->push(a);
+                while (!producersQueues.at(i)->isEmpty()) {
+                    // pop the article
+                    article a = producersQueues.at(i)->remove();
+                    // check if done
+                    string category = a.category;
+                    if (category == "DONE")
+                    {
+                        isDone.at(i) = true;
+                        numOfDoneProducers++;
+                    }
+                    else if (category == "NEWS")
+                    {
+                        dispatcherQueues[0]->push(a);
+                    }
+                    else if (category == "SPORTS")
+                    {
+                        dispatcherQueues[1]->push(a);
+                    }
+                    else
+                    { // category == "WEATHER"
+                        dispatcherQueues[2]->push(a);
+                    }
                 }
             }
         }
