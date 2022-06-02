@@ -20,7 +20,7 @@ struct article {
         category = c;
         index = i;
     }
-    
+
     void broadcastArticle() {
         cout << "Producer " << producer << " " << category << " " << index << endl;
     }

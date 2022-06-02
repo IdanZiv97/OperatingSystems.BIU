@@ -149,12 +149,15 @@ void dispatcher()
         isDone.push_back(false);
     }
     int numOfDoneProducers = 0;
+
     while (numOfDoneProducers < numOfProducers)
     {
         for (int i = 0; i < numOfProducers; i++)
         {
             if (!isDone.at(i))
             {
+                while (!producersQueues.at(i)->isEmpty())
+                {
                     // pop the article
                     article a = producersQueues.at(i)->remove();
                     // check if done
@@ -173,9 +176,10 @@ void dispatcher()
                         categories[1]->push(a);
                     }
                     else // category == "WEATHER"
-                    { 
+                    {
                         categories[2]->push(a);
                     }
+                }
             }
         }
     }
@@ -187,6 +191,11 @@ void dispatcher()
     }
 }
 
+/**
+ * @brief 
+ * 
+ * @param category the news queue that holds the articles that share the category
+ */
 void coEditor(UnboundedQueue *category)
 {
     article a = category->remove();
@@ -198,7 +207,9 @@ void coEditor(UnboundedQueue *category)
     }
     broadcastReady->insert(a);
 }
-
+/**
+ * Resposinble of broadcasting the articles pending.
+ */
 void screenManager()
 {
     int numOfDones = 0;
