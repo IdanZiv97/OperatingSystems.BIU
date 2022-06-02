@@ -124,6 +124,7 @@ void coEditor(UnboundedQueue *q)
     {
         screenManagerQueue->insert(a);
         sleep(0.1);
+        a = q->remove();
     }
     screenManagerQueue->insert(a);
 }
@@ -135,7 +136,6 @@ int main(int argc, char const *argv[])
      * this code creates all the shared queues
      */
     fstream file(argv[1]);
-    // fstream file("test.txt");
     if (!file.is_open())
     {
         cout << "failed to open file" << endl;
