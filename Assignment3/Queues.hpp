@@ -6,7 +6,7 @@
 #include <queue>
 #include <string>
 #include <mutex>
-#include <semaphore.h>
+#include "semaphore.h"
 using namespace std;
 
 struct article {
@@ -14,12 +14,12 @@ struct article {
     string category;
     int index;
     article(int p, string c, int i) {
-        producer = p;
+        producer = p + 1;
         category = c;
-        index = i + 1;
+        index = i;
     }
     void print() {
-        cout << "Producer " << producer << category << index << endl;
+        cout << "Producer " << producer << " " << category << " " << index << endl;
     }
 };
 
@@ -32,7 +32,7 @@ class BoundedQueue {
     public:
         BoundedQueue(int s): _size(s) {
             sem_init((&this->_full), 0, 0);
-            sem_init((&this->_empty), 0, this->_size);
+            sem_init((&this->_empty), 0, 4);
         }
         void insert(article a) {
             // check if queue is empty
