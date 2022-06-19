@@ -19,6 +19,7 @@ typedef enum bool {
 #define MAX_OPERATOR_VALUE 4
 #define MIN_OPERATOR_VALUE 1
 #define STRING_BUF_SIZE 100
+#define TIMEOUT_VALUE 30
 
 void setUpSignalHandlers();
 void receiveResult(int signum);
@@ -135,7 +136,7 @@ bool processRequest(int* requestParameters, char** rawData, int sizeOfRawData) {
         if (INT_MAX <= convert || INT_MIN >= convert) {
             isValid = false;
         }
-        // no need to convert back to int - since we are in range of int so no data loss occurs
+        // no need to cast to int - since we are in range of int so no data loss occurs
         requestParameters[index] = convert;
     }
     return isValid;
@@ -187,7 +188,7 @@ void writeToServerFile(char** params, int sizeOfParams, int pid, int fd) {
         strcat(dataString, " ");
         strcat(dataString, params[index]);
     }
-    if (write (fd, dataString, dataString, STRING_BUF_SIZE) == -1) {
+    if (write(fd, dataString, strlen(dataString)) == -1) {
         close(fd);
         raise(SIGUSR2);
     }
