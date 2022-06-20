@@ -22,6 +22,7 @@ void handleRequest(int signum);
 void errorHandler(int signum, siginfo_t *info, void *ptr);
 void timeoutHandler(int signum);
 void performRequest();
+bool processRequest(int *params, char* rawData, int sizeOfParams);
 bool calculate(int leftOperand, int rightOperand, int operator, int* product);
 
 int main(int argc, char** argv) {
@@ -36,6 +37,7 @@ int main(int argc, char** argv) {
     alarm(TIMEOUT_VALUE);
     while(true) {
         pause();
+        while(wait(NULL) != -1){}
     }
     return 0;
 }
@@ -56,8 +58,7 @@ void handleRequest(int signum) {
 
 void performRequest() {
     int requestParams[4] = {};
-    int result;
-    int clientFilename[STRING_BUF_SIZE] = "to_client_";
+    char clientFilename[STRING_BUF_SIZE] = "to_client_";
     // try and open the shared file
     int sharedFileFD = open(SHARED_FILE, R_OK, 0777);
     if (-1 == sharedFileFD) { // child process failed, invoke error handler at the father processor
@@ -193,16 +194,8 @@ void timeoutHandler(int signum) {
  * @param ptr 
  */
 void errorHandler(int signum, siginfo_t *info, void *ptr) {
-    int retStatus;
-    if (info->si_pid != getpid()) {
-        waitpid(info->si_pid, &retStatus, 0);
-        if (WIFEXITED(retStatus)) {
-            if (WEXITSTATUS(retStatus) == -1) {
-                printf("ERORR_FROM_EX4");
-                exit(-1);
-            }
-        }
-    }
+    printf("ERORR_FROM_EX4\n");
+    exit(-1);
 }
 
 void setUpSignalHandlers() {
