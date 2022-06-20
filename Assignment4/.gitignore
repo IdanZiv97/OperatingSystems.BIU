@@ -1,0 +1,5 @@
+.vscode/
+testing/
+ex4_client.o
+ex4_srv.o
+to_srv
