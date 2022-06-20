@@ -29,32 +29,33 @@ int calculate(int left, int op, int right);
 
 int main(int argc, char** argv) {
     // set up signal handlers
+    signal(SIGUSR2, handleRequest);
+    signal(SIGALRM, timeoutHandler);
     // first delete to_srv if exists
-    // if (access(SHARED_FILE, F_OK) == 0) {
-    //     if (remove(SHARED_FILE) == -1) {
-    //         raise(SIGUSR2);
-    //     }
-    // }
+    if (access(SHARED_FILE, F_OK) == 0) {
+        if (remove(SHARED_FILE) == -1) {
+            raise(SIGUSR2);
+        }
+    }
     // set the alarm
-    test();
-    // alarm(TIMEOUT_VALUE);
-    // while(true) {
-    //     pause();
-    //     while(wait(NULL) != -1){}
-    // }
+    while(1) {
+        alarm(TIMEOUT_VALUE);
+        pause();
+    }
     return 0;
 }
 
 void handleRequest(int signum) {
     // cancel the curret alarm
-    // alarm(0);
+    signal(SIGUSR2, handleRequest);
+    alarm(0);
     //create child process
     int retVal = fork();
     if (retVal == -1) {
         printf(ERROR);
         exit(-1);
     } else if (retVal == 0) { // child
-        FILE *toSrv = fopen(SHARED_FILE, O_RDONLY);
+        FILE *toSrv = fopen(SHARED_FILE, "r");
         if (NULL == toSrv) {
             printf(ERROR);
             exit(-1);
@@ -63,7 +64,7 @@ void handleRequest(int signum) {
         char buffer[20];
         int leftOpearnd, rightOperand , operator, clientPID;
         int iteration = 1;
-        while(fgets(buffer, 20, toSrv) && iteration != 5) {
+        while(fgets(buffer, 20, toSrv) != NULL) {
             if (1 == iteration) {
                 clientPID = atoi(buffer);
                 iteration++;
@@ -96,9 +97,11 @@ void handleRequest(int signum) {
         }
         //close the file
         close(clientFD);
-        // notify the parent
+        // notify the client
+        kill(clientPID, SIGUSR1);
     } else { // father - reset the timer
         alarm(TIMEOUT_VALUE);
+        return;
     }
 }
 
