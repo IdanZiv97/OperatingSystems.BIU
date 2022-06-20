@@ -8,67 +8,58 @@
 #include <limits.h>
 #include <sys/wait.h>
 #include <sys/syscall.h>
-// #include <linux/random.h>
-
-
-typedef enum bool {
-    false=0,
-    true=1
-}bool;
 
 #define SHARED_FILE "to_srv.txt"
 #define ERROR "ERROR_FROM_EX4\n"
 #define MAX_OPERATOR_VALUE 4
 #define MIN_OPERATOR_VALUE 1
 
-#define STRING_BUF_SIZE 100
-#define TIMEOUT_VALUE 30
-
 void setUpSignalHandlers();
 void receiveResult(int signum);
 void errorHandler(int signum);
-
+void test();
 void timeoutHandler(int signum);
 int accessSharedBuffer();
 int getRandomNumber();
 
 
 int main(int argc, char** argv) {
-    //initialize the signal handlers
-    setUpSignalHandlers();
-    // check if the number of args is valid
-    if (5 != argc) {
-        printf(ERROR);
-        exit(-1);
-    }
-    int sharedFileFD = accessSharedBuffer();
-    if (sharedFileFD == -1) {
-        // failed to open shared file
-        raise(SIGUSR2);
-    }
-    // process request of client - here we validate the data
-    int operator = atoi(argv[3]);
-    if (operator > MAX_OPERATOR_VALUE || operator < MIN_OPERATOR_VALUE) {
-        close(sharedFileFD);
-        remove(SHARED_FILE);
-        printf(ERROR);
-        exit(-1);
-    }
-    int leftOperand = atoi(argv[2]);
-    int rightOperand = atoi(argv[4]);
-    //create the dock
-    int myPID = (int) getpid();
-    char requestDataBuffer[100];
-    sprintf(requestDataBuffer, "%d\n%d\n%d\n%d\n", myPID, leftOperand, operator, rightOperand);
-    write(sharedFileFD, requestDataBuffer, strlen(requestDataBuffer));
-    //close the shared file
-    close(sharedFileFD);
-    //send signal to server that i want calculations - SIGUSR1
-    kill(atoi(argv[1]), SIGUSR1);
-    // //set alarm to 30 sec
-    alarm(30);
-    // //pause - not in a loop
-    pause();
+    // //initialize the signal handlers
+    // setUpSignalHandlers();
+    // // check if the number of args is valid
+    // if (5 != argc) {
+    //     printf(ERROR);
+    //     exit(-1);
+    // }
+    // int sharedFileFD = accessSharedBuffer();
+    // if (sharedFileFD == -1) {
+    //     // failed to open shared file
+    //     raise(SIGUSR2);
+    // }
+    // // process request of client - here we validate the data
+    // int operator = atoi(argv[3]);
+    // if (operator > MAX_OPERATOR_VALUE || operator < MIN_OPERATOR_VALUE) {
+    //     close(sharedFileFD);
+    //     remove(SHARED_FILE);
+    //     printf(ERROR);
+    //     exit(-1);
+    // }
+    // int leftOperand = atoi(argv[2]);
+    // int rightOperand = atoi(argv[4]);
+    // //create the dock
+    // int myPID = (int) getpid();
+    // char requestDataBuffer[100];
+    // sprintf(requestDataBuffer, "%d\n%d\n%d\n%d\n", myPID, leftOperand, operator, rightOperand);
+    // write(sharedFileFD, requestDataBuffer, strlen(requestDataBuffer));
+    // //close the shared file
+    // close(sharedFileFD);
+    // //send signal to server that i want calculations - SIGUSR1
+    // kill(atoi(argv[1]), SIGUSR1);
+    // // //set alarm to 30 sec
+    // alarm(30);
+    // // //pause - not in a loop
+    // pause();
+    test();
 }
 
 void setUpSignalHandlers() {
@@ -97,31 +88,56 @@ void errorHandler(int signum) {
 }
 
 void receiveResult(int signum) {
-    //cancle current alarm request
     alarm(0);
-    char fileName[STRING_BUF_SIZE] = "to_client_";
-    char clientPID[STRING_BUF_SIZE] = {};
-    sprintf(clientPID, "%d", getpid());
+    char fileName[50] = "to_client_";
+    char clientPID[20];
+    sprintf(clientPID, "%d.txt", (int) getpid());
     strcat(fileName, clientPID);
     int clientFileFD = open(fileName, R_OK);
     //try to open the file
     if (-1 == clientFileFD) {
-        raise(SIGUSR2);
+        printf(ERROR);
+        exit(-1);
     }
     //try to read
-    char buffer[STRING_BUF_SIZE] = {};
-    if (-1 == read(clientFileFD, buffer, STRING_BUF_SIZE)) {
+    char buffer[100];
+    if (-1 == read(clientFileFD, buffer, strlen(buffer))) {
+        close(clientFileFD);
+        remove(fileName);
+    }
+    printf("%s\n", buffer);
+    //delete and release used resources
+    if (-1 == close(clientFileFD) || -1 == remove(fileName)) {
+        printf(ERROR);
+        exit(-1);
+    }
+}
+
+void test() {
+    char fileName[50] = "to_client_";
+    char clientPID[20];
+    sprintf(clientPID, "%d.txt", (int) getpid());
+    strcat(fileName, clientPID);
+    int clientFileFD = open(fileName, R_OK);
+    //try to open the file
+    if (-1 == clientFileFD) {
+        printf(ERROR);
+        exit(-1);
+        // raise(SIGUSR2);
+    }
+    //try to read
+    char buffer[100];
+    if (-1 == read(clientFileFD, buffer, strlen(buffer))) {
         close(clientFileFD);
         remove(fileName);
         raise(SIGUSR2);
     }
-    //print the result
     printf("%s\n", buffer);
     //delete and release used resources
     if (-1 == close(clientFileFD) || -1 == remove(fileName)) {
-        raise(SIGUSR2);
+        printf(ERROR);
+        exit(-1);
     }
-
 
 }
 
@@ -135,7 +151,7 @@ void receiveResult(int signum) {
 int accessSharedBuffer() {
     int triesCounter = 0;
     int fd;
-    while(true) {
+    while(1) {
         if (10 == triesCounter) {
             fd = -1;
             return fd;
