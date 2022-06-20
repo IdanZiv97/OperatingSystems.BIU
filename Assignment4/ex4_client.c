@@ -47,6 +47,14 @@ int main(int argc, char** argv) {
         raise(SIGUSR2);
     }
     // process request of client - here we validate the data
+    int operator = atoi(argv[3]);
+    printf("operator is: %d\n", operator);
+    if (operator > MAX_OPERATOR_VALUE || operator < MIN_OPERATOR_VALUE) {
+        close(sharedFileFD);
+        remove(SHARED_FILE);
+        printf(ERROR);
+        exit(-1);
+    }
     //send signal to server that i want calculations - SIGUSR1
     // kill(atoi(argv[1]), SIGUSR1);
     // //set alarm to 30 sec
