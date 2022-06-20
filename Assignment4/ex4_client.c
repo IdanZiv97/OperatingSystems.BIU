@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     setUpSignalHandlers();
     //check if the number of args is valid
         // else - raise error
-    if (!5 == argc) {
+    if (5 != argc) {
         raise(SIGUSR2);
     }
     //process request of client - here we validate the data
