@@ -8,7 +8,8 @@
 #include <limits.h>
 #include <sys/wait.h>
 #include <sys/syscall.h>
-#include <linux/random.h>
+// #include <linux/random.h>
+
 
 typedef enum bool {
     false=0,
@@ -25,8 +26,9 @@ void setUpSignalHandlers();
 void receiveResult(int signum);
 void errorHandler(int signum);
 bool processRequest(int* requestParameters, char** rawData, int sizeOfRawData);
-void writeToServerFile(int* params, int sizeOfParams, int pid, int fd);
+void writeToServerFile(char** params, int sizeOfParams, int pid, int fd);
 void timeoutHandler(int signum);
+void accessSharedBuffer(int *fd);
 
 
 int main(int argc, char** argv) {
@@ -99,7 +101,7 @@ void receiveResult(int signum) {
     }
     //try to read
     char buffer[STRING_BUF_SIZE] = {};
-    if (-1 == read(clientFileFD, buffer, STRING_BUF_SIZE) {
+    if (-1 == read(clientFileFD, buffer, STRING_BUF_SIZE)) {
         close(clientFileFD);
         remove(fileName);
         raise(SIGUSR2);
@@ -126,7 +128,8 @@ void receiveResult(int signum) {
 bool processRequest(int* requestParameters, char** rawData, int sizeOfRawData) {
     long int convert;
     bool isValid = true;
-    for (int index = 0; index < sizeOfRawData; index++) {
+    int index;
+    for (index = 0; index < sizeOfRawData; index++) {
         convert = strtol(rawData[index], NULL, 0);
         // making sure the conversion was successful
         if (EINVAL == errno) {
@@ -149,26 +152,33 @@ bool processRequest(int* requestParameters, char** rawData, int sizeOfRawData) {
  * We also want to limit our tries.
  * @param fd 
  */
-void accessSharedBuffer(int* fd) {
+void accessSharedBuffer(int *fd) {
     int triesCounter = 0;
-    int randomNumbers[10];
-    int result = syscall(SYS_getrandom, randomNumbers, sizeof(int) * 10, 0);
-    if (-1 == result) {
-        raise(SIGUSR2);
-    }
+    // int randomNumbers[10];
+    // int result = syscall(SYS_getrandom, randomNumbers, sizeof(int) * 10, 0);
+    // if (-1 == result) {
+    //     raise(SIGUSR2);
+    // }
+    int retVal;
     while(true) {
         if (10 == triesCounter) {
             raise(SIGUSR2);
         }
-        int retVal = open(SHARED_FILE, O_WRONLY | O_CREAT | O_EXCL, 0777);
+        retVal = open(SHARED_FILE, O_WRONLY | O_CREAT | O_EXCL, 0777);
         if (retVal < 0) {
-            int timeToSleep = (randomNumbers[triesCounter++] % 6) + 1;
+            // int timeToSleep = (randomNumbers[triesCounter++] % 6) + 1;
+            int timeToSleep = getRandomNumber();
             sleep(timeToSleep);
         } else {
             break;
         }
     }
     *fd = retVal;
+}
+
+int getRandomNumber() {
+    int randomNumber = rand() % 6 + 1;
+    return randomNumber;
 }
 
 /**
@@ -184,7 +194,7 @@ void writeToServerFile(char** params, int sizeOfParams, int pid, int fd) {
     char dataString[STRING_BUF_SIZE] = {};
     char pidBuffer[STRING_BUF_SIZE] = {};
     sprintf(pidBuffer, "%d", pid);
-    for (int index = 0; i < sizeOfParams; index++) {
+    for (int index = 0; index < sizeOfParams; index++) {
         strcat(dataString, " ");
         strcat(dataString, params[index]);
     }
@@ -194,5 +204,3 @@ void writeToServerFile(char** params, int sizeOfParams, int pid, int fd) {
     }
     close(fd);
 }
-
-void 
