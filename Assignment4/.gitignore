@@ -1,5 +1,3 @@
-.vscode/
-testing/
-ex4_client.o
-ex4_srv.o
-to_srv
+*
+!ex4_srv.c
+!ex4_client.c
