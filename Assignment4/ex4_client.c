@@ -16,50 +16,43 @@ typedef enum bool {
     true=1
 }bool;
 
-#define SHARED_FILE "to_srv"
+#define SHARED_FILE "to_srv.txt"
+#define ERROR "ERROR_FROM_EX4\n"
 #define MAX_OPERATOR_VALUE 4
 #define MIN_OPERATOR_VALUE 1
+
 #define STRING_BUF_SIZE 100
 #define TIMEOUT_VALUE 30
 
 void setUpSignalHandlers();
 void receiveResult(int signum);
 void errorHandler(int signum);
-bool processRequest(int* requestParameters, char** rawData, int sizeOfRawData);
-void writeToServerFile(char** params, int sizeOfParams, int pid, int fd);
+
 void timeoutHandler(int signum);
-void accessSharedBuffer(int *fd);
+int accessSharedBuffer();
+int getRandomNumber();
 
 
 int main(int argc, char** argv) {
     //initialize the signal handlers
     setUpSignalHandlers();
-    //check if the number of args is valid
-        // else - raise error
+    // check if the number of args is valid
     if (5 != argc) {
-        raise(SIGUSR2);
+        printf(ERROR);
+        exit(-1);
     }
-    //process request of client - here we validate the data
-    int params[4];
-    char** clientData = argv + 1;
-    if (processRequest(params, clientData, 4) == false) {
-        raise(SIGUSR2);
-    }
-    //write the data to the shared buffer
-    int sharedBufferFD;
-    accessSharedBuffer(&sharedBufferFD);
-    char** requestParams = argv + 2;
-    writeToServerFile(params, 3, getpid(), sharedBufferFD);
-    if (sharedBufferFD == -1) {
+    int sharedFileFD = accessSharedBuffer();
+    if (sharedFileFD == -1) {
         // failed to open shared file
         raise(SIGUSR2);
     }
+    // process request of client - here we validate the data
     //send signal to server that i want calculations - SIGUSR1
-    kill(params[0], SIGUSR1);
-    //set alarm to 30 sec
-    alarm(30);
-    //pause - not in a loop
-    pause();
+    // kill(atoi(argv[1]), SIGUSR1);
+    // //set alarm to 30 sec
+    // alarm(30);
+    // //pause - not in a loop
+    // pause();
 }
 
 void setUpSignalHandlers() {
@@ -117,69 +110,31 @@ void receiveResult(int signum) {
 }
 
 /**
- * @brief Here we will process the data of the client's request and put it inside the parameters belonging to the server
- * The function also validates.
- * @param requestParameters an array to hold the parameters we need to write to the shared file
- * @param rawData the arguments that the client code received
- * @param sizeOfRawData 
- * @return true in case the data is valid
- * @return false in case the data is invalid
- */
-bool processRequest(int* requestParameters, char** rawData, int sizeOfRawData) {
-    long int convert;
-    bool isValid = true;
-    int index;
-    for (index = 0; index < sizeOfRawData; index++) {
-        convert = strtol(rawData[index], NULL, 0);
-        // making sure the conversion was successful
-        if (EINVAL == errno) {
-            isValid = false;
-        }
-        // check that we have an int - since the params are integers
-        if (INT_MAX <= convert || INT_MIN >= convert) {
-            isValid = false;
-        }
-        // no need to cast to int - since we are in range of int so no data loss occurs
-        requestParameters[index] = convert;
-    }
-    return isValid;
-}
-
-/**
  * @brief this function tries to gain access to the shared file
  * Because of the possibility that another client is trying to access the shared file of the server
  * we want to wait for a random period of time between tries.
  * We also want to limit our tries.
- * @param fd 
+ * @return if failed to access file than fd is -1
  */
-void accessSharedBuffer(int *fd) {
+int accessSharedBuffer() {
     int triesCounter = 0;
-    // int randomNumbers[10];
-    // int result = syscall(SYS_getrandom, randomNumbers, sizeof(int) * 10, 0);
-    // if (-1 == result) {
-    //     raise(SIGUSR2);
-    // }
-    int retVal;
+    int fd;
     while(true) {
         if (10 == triesCounter) {
-            raise(SIGUSR2);
+            fd = -1;
+            return fd;
         }
-        retVal = open(SHARED_FILE, O_WRONLY | O_CREAT | O_EXCL, 0777);
-        if (retVal < 0) {
-            // int timeToSleep = (randomNumbers[triesCounter++] % 6) + 1;
-            int timeToSleep = getRandomNumber();
+        fd = open(SHARED_FILE, O_WRONLY | O_CREAT | O_EXCL, 0777);
+        if (fd < 0) {
+            int timeToSleep = rand() % 6 + 1;
             sleep(timeToSleep);
         } else {
             break;
         }
     }
-    *fd = retVal;
+    return fd;
 }
 
-int getRandomNumber() {
-    int randomNumber = rand() % 6 + 1;
-    return randomNumber;
-}
 
 /**
  * @brief This function print the calculation request data to the shared file
