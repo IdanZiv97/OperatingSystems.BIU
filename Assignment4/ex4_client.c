@@ -152,26 +152,4 @@ int accessSharedBuffer() {
 }
 
 
-/**
- * @brief This function print the calculation request data to the shared file
- * 
- * @param params the request data
- * @param sizeOfParams
- * @param pid the pid of the owner of the request
- * @param fd the fd of the shared buffer file
- */
 
-void writeToServerFile(char** params, int sizeOfParams, int pid, int fd) {
-    char dataString[STRING_BUF_SIZE] = {};
-    char pidBuffer[STRING_BUF_SIZE] = {};
-    sprintf(pidBuffer, "%d", pid);
-    for (int index = 0; index < sizeOfParams; index++) {
-        strcat(dataString, " ");
-        strcat(dataString, params[index]);
-    }
-    if (write(fd, dataString, strlen(dataString)) == -1) {
-        close(fd);
-        raise(SIGUSR2);
-    }
-    close(fd);
-}
