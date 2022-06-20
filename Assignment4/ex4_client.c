@@ -48,19 +48,27 @@ int main(int argc, char** argv) {
     }
     // process request of client - here we validate the data
     int operator = atoi(argv[3]);
-    printf("operator is: %d\n", operator);
     if (operator > MAX_OPERATOR_VALUE || operator < MIN_OPERATOR_VALUE) {
         close(sharedFileFD);
         remove(SHARED_FILE);
         printf(ERROR);
         exit(-1);
     }
+    int leftOperand = atoi(argv[2]);
+    int rightOperand = atoi(argv[4]);
+    //create the dock
+    int myPID = (int) getpid();
+    char requestDataBuffer[100];
+    sprintf(requestDataBuffer, "%d\n%d\n%d\n%d\n", myPID, leftOperand, operator, rightOperand);
+    write(sharedFileFD, requestDataBuffer, strlen(requestDataBuffer));
+    //close the shared file
+    close(sharedFileFD);
     //send signal to server that i want calculations - SIGUSR1
-    // kill(atoi(argv[1]), SIGUSR1);
+    kill(atoi(argv[1]), SIGUSR1);
     // //set alarm to 30 sec
-    // alarm(30);
+    alarm(30);
     // //pause - not in a loop
-    // pause();
+    pause();
 }
 
 void setUpSignalHandlers() {
