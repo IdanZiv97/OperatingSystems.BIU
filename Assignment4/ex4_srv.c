@@ -36,8 +36,8 @@ int main(int argc, char** argv) {
         }
     }
     // set the alarm
+    alarm(ALARM_VALUE);
     while(1) {
-        alarm(ALARM_VALUE);
         pause();
     }
     return 0;
@@ -98,7 +98,7 @@ void readRequestData(FILE* f, int* params, char* clientPID) {
 
 void handleRequest(int signum) {
     // cancel the curret alarm
-    signal(SIGUSR2, handleRequest);
+    signal(SIGUSR1, handleRequest);
     alarm(0);
     //create child process
     int retVal = fork();
@@ -158,6 +158,8 @@ void calculate(char* res, int left, int op, int right) {
  */
 void timeoutHandler(int signum) {
     printf("The server was closed because no service request was received for the last 60 seconds\n");
+    int status;
+    while(wait(&status) != -1){}
     exit(0);
 }
 
