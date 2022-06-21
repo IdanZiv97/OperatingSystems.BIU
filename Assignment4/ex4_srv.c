@@ -27,7 +27,6 @@ void readRequestData(FILE* f, int* params, char* clientPID);
 
 int main(int argc, char** argv) {
     // set up signal handlers
-    execute();
     signal(SIGUSR1, handleRequest);
     signal(SIGALRM, timeoutHandler);
     // first delete to_srv if exists
@@ -74,23 +73,16 @@ void execute() {
 }
 
 void readRequestData(FILE* f, int* params, char* clientPID) {
-    char buffer[100];
+    char buffer[BUF_MAX];
     // read client PID
     fgets(clientPID, BUF_MAX, f);
     clientPID[strlen(clientPID) - 1] = '\0';
     params[0] = atoi(clientPID);
-    // read left operand
-    fgets(buffer, BUF_MAX, f);
-    buffer[strlen(buffer) - 1] = '\0';
-    params[1] = atoi(buffer);
-    //read operator
-    fgets(buffer, BUF_MAX, f);
-    buffer[strlen(buffer) - 1] = '\0';
-    params[2] = atoi(buffer);
-    // read right operand
-    fgets(buffer, BUF_MAX, f);
-    buffer[strlen(buffer) - 1] = '\0';
-    params[3] = atoi(buffer);
+    int i = 1;
+    while(fgets(buffer, BUF_MAX, f)) {
+        buffer[strlen(buffer) - 1] = '\0';
+        params[i++] = atoi(buffer);
+    }
     if (0 != fclose(f) || -1 == remove(SHARED_FILE)) {
         printf(ERROR);
         exit(-1);
