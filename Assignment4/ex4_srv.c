@@ -8,7 +8,7 @@
 #include <limits.h>
 #include <sys/wait.h>
 
-#define MAX_BUF 100
+#define BUF_MAX 100
 #define ERROR "ERROR_FROM_EX4\n"
 #define SHARED_FILE "to_srv.txt"
 #define ALARM_VALUE 60
@@ -27,6 +27,7 @@ void readRequestData(FILE* f, int* params, char* clientPID);
 
 int main(int argc, char** argv) {
     // set up signal handlers
+    execute();
     signal(SIGUSR1, handleRequest);
     signal(SIGALRM, timeoutHandler);
     // first delete to_srv if exists
@@ -50,13 +51,13 @@ void execute() {
         exit(-1);
     }
     int params[4];
-    char clientPID[MAX_BUF];
+    char clientPID[BUF_MAX];
     readRequestData(sharedFile, params, clientPID);
 
-    char result[MAX_BUF];
+    char result[BUF_MAX];
     calculate(result, params[1], params[2], params[3]);
 
-    char clientFilename[MAX_BUF];
+    char clientFilename[BUF_MAX];
     sprintf(clientFilename, "to_client_%s.txt", clientPID);
     FILE* clientFile = fopen(clientFilename, "w");
     if (NULL == clientFile) {
@@ -75,19 +76,19 @@ void execute() {
 void readRequestData(FILE* f, int* params, char* clientPID) {
     char buffer[100];
     // read client PID
-    fgets(clientPID, MAX_BUF, f);
+    fgets(clientPID, BUF_MAX, f);
     clientPID[strlen(clientPID) - 1] = '\0';
     params[0] = atoi(clientPID);
     // read left operand
-    fgets(buffer, MAX_BUF, f);
+    fgets(buffer, BUF_MAX, f);
     buffer[strlen(buffer) - 1] = '\0';
     params[1] = atoi(buffer);
     //read operator
-    fgets(buffer, MAX_BUF, f);
+    fgets(buffer, BUF_MAX, f);
     buffer[strlen(buffer) - 1] = '\0';
     params[2] = atoi(buffer);
     // read right operand
-    fgets(buffer, MAX_BUF, f);
+    fgets(buffer, BUF_MAX, f);
     buffer[strlen(buffer) - 1] = '\0';
     params[3] = atoi(buffer);
     if (0 != fclose(f) || -1 == remove(SHARED_FILE)) {
@@ -117,12 +118,11 @@ void handleRequest(int signum) {
 
 /**
  * @brief performs the desired arithmetic operation from the client
+ * Note: it detects illegal
+ * @param res - the result string, to be written to the client file
  * @param leftOperand 
  * @param rightOperand
  * @param operator
- * @param calculation 
- * @return true
- * @return false 
  */
 
 void calculate(char* res, int left, int op, int right) {
@@ -144,6 +144,11 @@ void calculate(char* res, int left, int op, int right) {
         case DIV:
             result = left / right;
             break;
+        // in case the operator is invalid
+        default:
+            printf(ERROR);
+            exit(0);
+            break;
     }
     sprintf(res, "%d", result);
 }
@@ -152,8 +157,8 @@ void calculate(char* res, int left, int op, int right) {
 
 
 /**
- * @brief 
- * 
+ * @brief in case of time out we want to notify that the server is being shut down.
+ * Since the server creates a thread for each client request we must wait for all the request to be done.
  * @param signum 
  */
 void timeoutHandler(int signum) {
@@ -163,19 +168,9 @@ void timeoutHandler(int signum) {
     exit(0);
 }
 
-
 /**
- * @brief The errors can only occur in the 
- * 
- * @param signum 
- * @param info 
- * @param ptr 
+ * assigning user defined handler for signals
  */
-void errorHandler(int signum, siginfo_t *info, void *ptr) {
-    printf("ERORR_FROM_EX4\n");
-    exit(-1);
-}
-
 void setUpSignalHandlers() {
     signal(SIGUSR1, handleRequest);
     signal(SIGALRM, timeoutHandler);
