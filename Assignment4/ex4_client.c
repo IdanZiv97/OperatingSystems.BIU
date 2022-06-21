@@ -1,3 +1,5 @@
+// Idan Ziv 318175197
+
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
