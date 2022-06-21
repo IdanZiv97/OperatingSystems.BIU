@@ -45,6 +45,9 @@ int main(int argc, char** argv) {
     return 0;
 }
 
+/**
+ * assigning user defined handler for signals
+ */
 void setUpSignalHandlers() {
     signal(SIGALRM, timeoutHandler);
     signal(SIGUSR1, receiveResult);
@@ -61,6 +64,11 @@ void timeoutHandler(int signum) {
     exit(-1);
 }
 
+/**
+ * @brief the client processes the arguments passed into concreted data to the server
+ * @param f shared file
+ * @param params arguments passed from the user
+ */
 void writeRequestData(FILE* f, char** params) {
     char myPID[BUF_MAX];
     sprintf(myPID, "%u", getpid());
@@ -80,7 +88,10 @@ void writeRequestData(FILE* f, char** params) {
 }
 
 
-
+/**
+ * @brief handles response from the server
+ * @param signum 
+ */
 void receiveResult(int signum) {
     alarm(0);
     char fileName[BUF_MAX];

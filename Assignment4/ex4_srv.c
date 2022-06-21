@@ -43,6 +43,10 @@ int main(int argc, char** argv) {
     return 0;
 }
 
+/**
+ * @brief the server creates a child process to handle each clients request, this is the logic of handling a reqeust
+ */
+
 void execute() {
     FILE* sharedFile = fopen(SHARED_FILE, "r");
     if (NULL == sharedFile) {
@@ -72,6 +76,13 @@ void execute() {
     kill(clientPIDvalue, SIGUSR1);
 }
 
+/**
+ * @brief accessing the data written to the shared file
+ * The reading is being performed line by line.
+ * @param f shared file
+ * @param params an array of all the integer values from the file
+ * @param clientPID a string buffer of the client PID, for later use
+ */
 void readRequestData(FILE* f, int* params, char* clientPID) {
     char buffer[BUF_MAX];
     // read client PID
@@ -89,6 +100,11 @@ void readRequestData(FILE* f, int* params, char* clientPID) {
     }
 }
 
+/**
+ * @brief signal handler
+ * Invoked upon a request to the server
+ * @param signum 
+ */
 void handleRequest(int signum) {
     // cancel the curret alarm
     signal(SIGUSR1, handleRequest);
