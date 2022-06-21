@@ -7,68 +7,49 @@
 #include <errno.h>
 #include <limits.h>
 #include <sys/wait.h>
-#include <sys/syscall.h>
 
 #define SHARED_FILE "to_srv.txt"
 #define ERROR "ERROR_FROM_EX4\n"
-#define MAX_OPERATOR_VALUE 4
-#define MIN_OPERATOR_VALUE 1
+#define BUF_MAX 100
+#define ALARM_VALUE 30
 
 void setUpSignalHandlers();
 void receiveResult(int signum);
 void errorHandler(int signum);
 void timeoutHandler(int signum);
-int accessSharedBuffer();
+FILE* accessSharedBuffer();
 int getRandomNumber();
+void writeRequestData(FILE* f, char** params);
 
 
 int main(int argc, char** argv) {
     //initialize the signal handlers
-    signal(SIGALRM, timeoutHandler);
-    signal(SIGUSR1, receiveResult);
-    signal(SIGUSR2, errorHandler);
+    setUpSignalHandlers();
     // check if the number of args is valid
     if (5 != argc) {
         printf(ERROR);
         exit(-1);
     }
-    int sharedFileFD = accessSharedBuffer();
-    if (sharedFileFD == -1) {
+    FILE* sharedFile = accessSharedBuffer();
+    if (NULL == sharedFile) {
         // failed to open shared file
         printf(ERROR);
         exit(-1);
     }
-    // process request of client - here we validate the data
-    int operator = atoi(argv[3]);
-    if (operator > MAX_OPERATOR_VALUE || operator < MIN_OPERATOR_VALUE) {
-        close(sharedFileFD);
-        remove(SHARED_FILE);
-        printf(ERROR);
-        exit(-1);
-    }
-    int leftOperand = atoi(argv[2]);
-    int rightOperand = atoi(argv[4]);
-    //create the dock
-    int myPID = (int) getpid();
-    char requestDataBuffer[100];
-    sprintf(requestDataBuffer, "%d\n%d\n%d\n%d\n", myPID, leftOperand, operator, rightOperand);
-    write(sharedFileFD, requestDataBuffer, strlen(requestDataBuffer));
-    //close the shared file
-    close(sharedFileFD);
-    //send signal to server that i want calculations - SIGUSR1
-    int response = kill(atoi(argv[1]), SIGUSR2);
-    // //set alarm to 30 sec
-    alarm(30);
-    //pause - not in a loop
-    pause();
+    writeRequestData(sharedFile, argv);
 
+    pid_t serverPID = atoi(argv[1]);
+    kill(serverPID, SIGUSR1);
+    alarm(ALARM_VALUE);
+    pause();
+    return 0;
 }
 
 void setUpSignalHandlers() {
     signal(SIGALRM, timeoutHandler);
     signal(SIGUSR1, receiveResult);
-    signal(SIGUSR2, errorHandler);
 }
+
 /**
  * @brief The client code is waiting for 30 seconds to a response from the server
  * In case the server response has not been recieved in that time span the client code
@@ -80,36 +61,42 @@ void timeoutHandler(int signum) {
     exit(-1);
 }
 
-/**
- * @brief In case of an error in the program this function will be invoked.
- * @param signum signal number invoking the function
- */
-void errorHandler(int signum) {
-    printf("ERROR_FROM_EX4\n");
-    exit(-1);
+void writeRequestData(FILE* f, char** params) {
+    char myPID[BUF_MAX];
+    sprintf(myPID, "%u", getpid());
+    fwrite(myPID, strlen(myPID), 1, f);
+    fwrite("\n", strlen("\n"), 1, f);
+    // write calculation params
+    int i;
+    for (i = 2; i < 5; i++) {
+        fwrite(params[i], strlen(params[i]), 1, f);
+        fwrite("\n", strlen("\n"), 1, f);
+    }
+    // close the file
+    if (0 != fclose(f)) {
+        printf(ERROR);
+        exit(-1);
+    }
 }
+
+
 
 void receiveResult(int signum) {
     alarm(0);
-    char fileName[50] = "to_client_";
-    char clientPID[20];
-    sprintf(clientPID, "%d.txt", (int) getpid());
-    strcat(fileName, clientPID);
-    int clientFileFD = open(fileName, R_OK);
+    char fileName[BUF_MAX];
+    sprintf(fileName, "to_client_%u.txt", getpid());
+    FILE* myFile = fopen(fileName, "r");
     //try to open the file
-    if (-1 == clientFileFD) {
+    if (NULL == myFile) {
         printf(ERROR);
         exit(-1);
     }
     //try to read
-    char buffer[100];
-    if (-1 == read(clientFileFD, buffer, strlen(buffer))) {
-        close(clientFileFD);
-        remove(fileName);
-    }
-    printf("%s", buffer);
+    char result[BUF_MAX];
+    fgets(result, BUF_MAX, myFile);
+    printf("%s\n", result);
     //delete and release used resources
-    if (-1 == close(clientFileFD) || -1 == remove(fileName)) {
+    if (0 != fclose(myFile) || -1 == remove(fileName)) {
         printf(ERROR);
         exit(-1);
     }
@@ -122,23 +109,23 @@ void receiveResult(int signum) {
  * We also want to limit our tries.
  * @return if failed to access file than fd is -1
  */
-int accessSharedBuffer() {
+FILE* accessSharedBuffer() {
     int triesCounter = 0;
-    int fd;
+    FILE* file;
     while(1) {
         if (10 == triesCounter) {
-            fd = -1;
-            return fd;
+            file = NULL;
+            return file;
         }
-        fd = open(SHARED_FILE, O_WRONLY | O_CREAT | O_EXCL, 0777);
-        if (fd < 0) {
+        file = fopen(SHARED_FILE, "w");
+        if (NULL == file) {
             int timeToSleep = rand() % 6 + 1;
             sleep(timeToSleep);
         } else {
             break;
         }
     }
-    return fd;
+    return file;
 }
 
 

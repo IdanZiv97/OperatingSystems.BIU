@@ -8,41 +8,92 @@
 #include <limits.h>
 #include <sys/wait.h>
 
-#define NUM_OF_ARGS 4
-#define STRING_BUF_SIZE 100
+#define MAX_BUF 100
 #define ERROR "ERROR_FROM_EX4\n"
 #define SHARED_FILE "to_srv.txt"
-#define TIMEOUT_VALUE 60
-
-typedef enum OPERATORS {
-    ADD = 1,
-    SUB = 2,
-    MULT = 3,
-    DIV = 4,
-} OPERATORS;
+#define ALARM_VALUE 60
+#define ADD 1
+#define SUB 2
+#define MULT 3
+#define DIV 4
 
 void setUpSignalHandlers();
 void handleRequest(int signum);
 void timeoutHandler(int signum);
-int calculate(int left, int op, int right);
+void calculate(char* res, int left, int op, int right);
+void execute();
+void readRequestData(FILE* f, int* params, char* clientPID);
 
 
 int main(int argc, char** argv) {
     // set up signal handlers
-    signal(SIGUSR2, handleRequest);
+    signal(SIGUSR1, handleRequest);
     signal(SIGALRM, timeoutHandler);
     // first delete to_srv if exists
-    if (access(SHARED_FILE, F_OK) == 0) {
-        if (remove(SHARED_FILE) == -1) {
-            raise(SIGUSR2);
+    if (0 == access(SHARED_FILE, F_OK)) {
+        if (-1 == remove(SHARED_FILE)) {
+            printf(ERROR);
         }
     }
     // set the alarm
     while(1) {
-        alarm(TIMEOUT_VALUE);
+        alarm(ALARM_VALUE);
         pause();
     }
     return 0;
+}
+
+void execute() {
+    FILE* sharedFile = fopen(SHARED_FILE, "r");
+    if (NULL == sharedFile) {
+        printf(ERROR);
+        exit(-1);
+    }
+    int params[4];
+    char clientPID[MAX_BUF];
+    readRequestData(sharedFile, params, clientPID);
+
+    char result[MAX_BUF];
+    calculate(result, params[1], params[2], params[3]);
+
+    char clientFilename[MAX_BUF];
+    sprintf(clientFilename, "to_client_%s.txt", clientPID);
+    FILE* clientFile = fopen(clientFilename, "w");
+    if (NULL == clientFile) {
+        printf(ERROR);
+        exit(-1);
+    }
+    fwrite(result, strlen(result), 1, clientFile);
+    if (0 != fclose(clientFile)) {
+        printf(ERROR);
+        exit(-1);
+    }
+    pid_t clientPIDvalue = params[0];
+    kill(clientPIDvalue, SIGUSR1);
+}
+
+void readRequestData(FILE* f, int* params, char* clientPID) {
+    char buffer[100];
+    // read client PID
+    fgets(clientPID, MAX_BUF, f);
+    clientPID[strlen(clientPID) - 1] = '\0';
+    params[0] = atoi(clientPID);
+    // read left operand
+    fgets(buffer, MAX_BUF, f);
+    buffer[strlen(buffer) - 1] = '\0';
+    params[1] = atoi(buffer);
+    //read operator
+    fgets(buffer, MAX_BUF, f);
+    buffer[strlen(buffer) - 1] = '\0';
+    params[2] = atoi(buffer);
+    // read right operand
+    fgets(buffer, MAX_BUF, f);
+    buffer[strlen(buffer) - 1] = '\0';
+    params[3] = atoi(buffer);
+    if (0 != fclose(f) || -1 == remove(SHARED_FILE)) {
+        printf(ERROR);
+        exit(-1);
+    }
 }
 
 void handleRequest(int signum) {
@@ -55,53 +106,11 @@ void handleRequest(int signum) {
         printf(ERROR);
         exit(-1);
     } else if (retVal == 0) { // child
-        FILE *toSrv = fopen(SHARED_FILE, "r");
-        if (NULL == toSrv) {
-            printf(ERROR);
-            exit(-1);
-        }
-        // gather request data from shared file
-        char buffer[20];
-        int leftOpearnd, rightOperand , operator, clientPID;
-        int iteration = 1;
-        while(fgets(buffer, 20, toSrv) != NULL) {
-            if (1 == iteration) {
-                clientPID = atoi(buffer);
-                iteration++;
-            } else if (2 == iteration) {
-                leftOpearnd = atoi(buffer);
-                iteration++;
-            } else if (3 == iteration) {
-                operator = atoi(buffer);
-                iteration++;
-            } else { // 4 == iteration
-                rightOperand = atoi(buffer);
-                iteration++;
-            }
-        }
-        // create client file
-        char clientFilename[100] = "to_client_";
-        char clientPIDstr[20];
-        sprintf(clientPIDstr, "%d", clientPID);
-        strcat(clientFilename, clientPIDstr);
-        strcat(clientFilename, ".txt");
-        int clientFD = open(clientFilename, O_CREAT | O_WRONLY, 0777);
-        // perform calculation
-        if (0 == rightOperand && DIV == operator) {
-            write(clientFD, "CANNOT_DIVIDE_BY_ZERO\n", strlen("CANNOT_DIVIDE_BY_ZERO\n"));
-        } else {
-            int result = calculate(leftOpearnd, operator, rightOperand);
-            char resultBuffer[20];
-            sprintf(resultBuffer, "%d\n", result);
-            write(clientFD, resultBuffer, strlen(resultBuffer));
-        }
-        //close the file
-        close(clientFD);
-        // notify the client
-        kill(clientPID, SIGUSR1);
+        execute();
+        exit(0);
     } else { // father - reset the timer
-        alarm(TIMEOUT_VALUE);
-        return;
+        alarm(ALARM_VALUE);
+        signal(SIGUSR1, handleRequest);
     }
 }
 
@@ -116,7 +125,11 @@ void handleRequest(int signum) {
  * @return false 
  */
 
-int calculate(int left, int op, int right) {
+void calculate(char* res, int left, int op, int right) {
+    if (0 == right && DIV == op) {
+        sprintf(res, "%s", "CANNOT_DIVIDE_BY_ZERO");
+        return;
+    }
     int result;
     switch (op) {
         case ADD:
@@ -132,7 +145,7 @@ int calculate(int left, int op, int right) {
             result = left / right;
             break;
     }
-    return result;
+    sprintf(res, "%d", result);
 }
 
 
